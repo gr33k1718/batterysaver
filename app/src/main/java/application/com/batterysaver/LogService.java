@@ -8,7 +8,6 @@ import android.os.BatteryManager;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
-import android.widget.Toast;
 
 import java.util.Calendar;
 
