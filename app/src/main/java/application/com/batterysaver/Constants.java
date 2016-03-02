@@ -4,7 +4,7 @@ package application.com.batterysaver;
  * Created by gr33k1718 on 09/02/2016.
  */
 public class Constants {
-
+        private int a = 1;
     public static final String SYSTEM_CONTEXT_PREFS = "systemContext";
     public static final String NETWORK_PREFS = "NETWORK_PREFS";
     public static final String SCREEN_TIME_PREFS = "SCRREN_TIME";
