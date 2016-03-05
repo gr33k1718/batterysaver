@@ -1,9 +1,12 @@
 package application.com.batterysaver;
 
 import android.content.Context;
+import android.net.ConnectivityManager;
 import android.net.TrafficStats;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.util.Log;
+import android.widget.Toast;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -19,29 +22,64 @@ public class NetworkContext {
 
 
     public static long[] getTrafficStats() {
+
+        ConnectivityManager manager = (ConnectivityManager) context
+                .getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        boolean is3g = manager.getNetworkInfo(ConnectivityManager.TYPE_MOBILE)
+                .isConnectedOrConnecting();
+
+        boolean isWifi = manager.getNetworkInfo(ConnectivityManager.TYPE_WIFI)
+                .isConnectedOrConnecting();
+
         long[] stats = new long[2];
         long prevNetworkStats = pref.getLong(Constants.NETWORK_TRAFFIC_PREF, 0);
         long prevMobileStats = pref.getLong(Constants.MOBILE_TRAFFIC_PREF, 0);
+        long prevTotalBytes = pref.getLong("TOTAL_TRAFFIC", 0);
 
         long currentNetworkStats = readFile(TX_FILE) + readFile(RX_FILE);
         long currentMobileStats = TrafficStats.getMobileRxBytes() + TrafficStats.getMobileTxBytes();
 
+        long currentTotalBytes = TrafficStats.getTotalRxBytes() + TrafficStats.getTotalTxBytes();
+
+        pref.putLong("TOTAL_TRAFFIC", currentTotalBytes);
+
+        if(currentMobileStats == 0){
+            currentMobileStats = prevMobileStats;
+        }
+
+        if(currentNetworkStats == 0){
+            currentNetworkStats = prevNetworkStats;
+        }
+
         long wifiTraffic = currentNetworkStats - prevNetworkStats;
         long mobileTraffic = currentMobileStats - prevMobileStats;
+        long totalBytes = currentTotalBytes - prevTotalBytes;
 
-        pref.putLong(Constants.MOBILE_TRAFFIC_PREF, currentMobileStats);
-        pref.putLong(Constants.NETWORK_TRAFFIC_PREF, currentNetworkStats);
 
-        pref.commit();
-
-        if (wifiTraffic >= 0 && mobileTraffic >= 0) {
-            stats[0] = wifiTraffic;
+        if(is3g){
+            long mobile = totalBytes - mobileTraffic;
+            stats[0] = mobile > 0 ? mobile : 0;
             stats[1] = mobileTraffic;
-        } else {
+            pref.putLong(Constants.MOBILE_TRAFFIC_PREF, currentMobileStats);
+        }
+        else if(isWifi){
+            long wifi = totalBytes - wifiTraffic;
+            stats[0] = wifiTraffic;
+            stats[1] = wifi > 0 ? wifi : 0;
+            pref.putLong(Constants.NETWORK_TRAFFIC_PREF, currentNetworkStats);
+        }
+        else {
             stats[0] = 0;
             stats[1] = 0;
         }
+        pref.commit();
 
+        /*Log.d("[shit]", "Previous mobile " + prevMobileStats + "\nPrevious network " + prevNetworkStats +
+                "\nCurrent mobile " + currentMobileStats + "\nCurrent network " + currentNetworkStats + "\nTotal network " + stats[1] +
+                "\nTotal mobile " + stats[0] + "\nTotal bytes " + totalBytes + "\nMobile " + (totalBytes - mobileTraffic)
+                + "\nWifi " + (totalBytes - wifiTraffic));
+*/
         return stats;
     }
 

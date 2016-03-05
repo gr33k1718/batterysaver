@@ -25,7 +25,7 @@ android:background="#FFFFFF">
         android:layout_weight="1"
         android:text="Set usage setting"></Button>
 </LinearLayout>
-<!--
+
 <TextView
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
@@ -41,7 +41,6 @@ android:background="#FFFFFF">
     android:text="Large Text"
     android:id="@+id/textView2"
     android:layout_gravity="center_horizontal" />
--->
 
 <ListView
     android:id="@+id/mylist"

@@ -1,6 +1,7 @@
 package application.com.batterysaver;
 
 import android.content.Context;
+import android.util.Log;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -11,7 +12,7 @@ public class CpuContext {
     private static Context context = GlobalVars.getAppContext();
     private static PreferencesUtil pref = PreferencesUtil.getInstance(context, Constants.SYSTEM_CONTEXT_PREFS, Context.MODE_PRIVATE);
 
-    public static float getLoad() {
+    public static double getLoad() {
 
         String prevCpuStats = pref.getString(Constants.CPU_LOAD_PREF, "cpu  0 0 0 0 0 0 0 0 0 0");
         String currentCpuStats = readCpuUsage().cpu;
@@ -21,7 +22,9 @@ public class CpuContext {
         pref.putString(Constants.CPU_LOAD_PREF, currentCpuStats);
         pref.commit();
 
-        return result;
+        //Log.d("[shit]", result +"\n" + prevCpuStats + "\n" + currentCpuStats);
+
+        return (double)Math.round(result * 100);
     }
 
     public static void clear() {
@@ -48,7 +51,9 @@ public class CpuContext {
         long totald = total - prevTotal;
         long idled = idle2 - idle1;
 
-        return (float) (totald - idled) / totald;
+        float result = (float)(totald - idled) / totald;
+
+        return result > 0 ? result : (float) idle2 / total;
     }
 
     public static CPUInfo readCpuUsage() {
@@ -58,15 +63,15 @@ public class CpuContext {
         try {
 
             RandomAccessFile reader = new RandomAccessFile("/proc/stat", "r");
-            for (int i = 0; i < 9; i++) {
+            /*for (int i = 0; i < 9; i++) {
                 String s = reader.readLine();
                 if (s.contains("cpu")) {
                     count++;
                 } else {
                     break;
                 }
-            }
-            reader.seek(0);
+            }*/
+           // reader.seek(0);
             for (int y = 0; y < 2; y++) {
                 cpu = reader.readLine();
             }
@@ -81,6 +86,7 @@ public class CpuContext {
         info.numProc = count;
         info.cpu = cpu;
 
+        //Log.d("[shit]", cpu);
         return info;
     }
 

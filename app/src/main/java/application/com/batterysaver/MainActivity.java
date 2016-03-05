@@ -37,7 +37,15 @@ public class MainActivity extends Activity {
 
         viewLogs();
 
-        scheduleAlarm();
+        //PendingIntent.getService(this, 1, new Intent(this, LogService.class), PendingIntent.FLAG_CANCEL_CURRENT).cancel();
+        Toast.makeText(this, "" + isActive(), Toast.LENGTH_SHORT).show();
+
+
+
+        //if(!isActive()){
+            scheduleAlarm();
+        //}
+
     }
 
 
@@ -72,16 +80,16 @@ public class MainActivity extends Activity {
     }
 
     public void scheduleAlarm() {
+        Toast.makeText(this, "Active", Toast.LENGTH_SHORT).show();
+
         Calendar time = Calendar.getInstance();
-        Toast.makeText(this, "Alarm set", Toast.LENGTH_SHORT).show();
+
         time.set(Calendar.HOUR_OF_DAY, time.get(Calendar.HOUR_OF_DAY) + 1);
         time.set(Calendar.MINUTE, 0);
 
+        PendingIntent p = PendingIntent.getService(this, 1, new Intent(this, LogService.class), PendingIntent.FLAG_CANCEL_CURRENT);
+
         AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-
-        PendingIntent p = PendingIntent.getService(this, 1, new Intent(this, LogService.class), PendingIntent.FLAG_UPDATE_CURRENT);
-
-        alarmManager.cancel(p);
 
         alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), AlarmManager.INTERVAL_HOUR, p);
     }
@@ -98,5 +106,9 @@ public class MainActivity extends Activity {
         ArrayList<String> days = new ArrayList<>(Arrays.asList(new String[]{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}));
         Adapter gridAdapter = new Adapter(this, R.layout.grid_item, days, true);
         gridview.setAdapter(gridAdapter);
+    }
+
+    public boolean isActive(){
+        return (PendingIntent.getService(this, 1, new Intent(this, LogService.class), PendingIntent.FLAG_NO_CREATE) != null);
     }
 }

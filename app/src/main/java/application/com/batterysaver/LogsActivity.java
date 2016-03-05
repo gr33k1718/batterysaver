@@ -3,12 +3,21 @@ package application.com.batterysaver;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.AlertDialog;
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.app.TaskStackBuilder;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.provider.Settings;
+import android.support.v4.app.NotificationCompat;
+import android.telephony.CellInfoGsm;
+import android.telephony.CellSignalStrengthGsm;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -17,7 +26,10 @@ import android.view.Window;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
+
+import org.w3c.dom.Text;
 
 import java.util.List;
 
@@ -26,6 +38,7 @@ public class LogsActivity extends Activity {
     private int value;
     private List<String> logs;
     private Adapter listAdapter;
+    private TextView tv;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,6 +46,7 @@ public class LogsActivity extends Activity {
         this.requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.logs_main);
         lv = (ListView) findViewById(R.id.mylist);
+        tv = (TextView) findViewById(R.id.textView);
 
         Intent intent = getIntent();
         value = intent.getIntExtra("key", 0);
@@ -101,6 +115,7 @@ public class LogsActivity extends Activity {
     }
 
     public void setupButtons() {
+
         Button mUpdateButton = (Button) findViewById(R.id.updateButton);
         Button mUsageButton = (Button) findViewById(R.id.usageButton);
 
@@ -120,7 +135,21 @@ public class LogsActivity extends Activity {
 
             @Override
             public void onClick(View v) {
-                List<ApplicationInfo> packages;
+                Intent intentAirplaneMode = new Intent(Settings.ACTION_AIRPLANE_MODE_SETTINGS);
+                intentAirplaneMode.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intentAirplaneMode);
+
+                //Notify();
+                /*
+                DatabaseLogger d = new DatabaseLogger(getApplicationContext());
+                UsageProfile[][] b = d.getIdlePeriods();
+                for (int i = 0; i < 24; i++) {
+                    if (b[4][i] != null) {
+                        Log.d("[shit]", "\nTime: " + i + " " + b[4][i].toString());
+                    }
+                }
+                //Log.d("[shit]", "\nTime: " + b[3][8].toString());
+                /*List<ApplicationInfo> packages;
                 PackageManager pm;
                 pm = getPackageManager();
                 //get a list of installed apps.
@@ -132,7 +161,7 @@ public class LogsActivity extends Activity {
                     if ((packageInfo.flags & ApplicationInfo.FLAG_SYSTEM) == 1) continue;
                     if (packageInfo.packageName.equals("application.com.test")) continue;
                     Log.d("[hmm]", packageInfo.packageName);
-                }
+                }*/
             }
         });
 
@@ -145,4 +174,28 @@ public class LogsActivity extends Activity {
         lv.setAdapter(listAdapter);
     }
 
+
+    private void Notify(){
+        NotificationCompat.Builder mBuilder =
+                new NotificationCompat.Builder(this)
+                        .setSmallIcon(R.drawable.ic_stat_name)
+                        .setContentTitle("My notification")
+                        .setContentText("Hello World!");
+        TaskStackBuilder stackBuilder = TaskStackBuilder.create(this);
+        Intent resultIntent = new Intent(this, MainActivity.class);
+// Adds the back stack for the Intent (but not the Intent itself)
+        stackBuilder.addParentStack(MainActivity.class);
+// Adds the Intent that starts the Activity to the top of the stack
+        stackBuilder.addNextIntent(resultIntent);
+        PendingIntent resultPendingIntent =
+                stackBuilder.getPendingIntent(
+                        0,
+                        PendingIntent.FLAG_UPDATE_CURRENT
+                );
+        mBuilder.setContentIntent(resultPendingIntent);
+        NotificationManager mNotificationManager =
+                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+// mId allows you to update the notification later on.
+        mNotificationManager.notify(0, mBuilder.build());
+    }
 }

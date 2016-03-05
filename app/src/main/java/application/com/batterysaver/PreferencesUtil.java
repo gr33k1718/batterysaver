@@ -4,6 +4,10 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Build;
 
+import com.google.gson.Gson;
+
+import java.util.List;
+
 /**
  * Created by gr33k1718 on 20/02/2016.
  */
@@ -52,6 +56,15 @@ public class PreferencesUtil {
         return prefs.getString(key, "");
     }
 
+    public UsageProfile[][] getUsageProfiles() {
+        String jsonUsageProfiles = prefs.getString("USAGE_PROFILES", null);
+        Gson gson = new Gson();
+        UsageProfile[][] usageProfiles = gson.fromJson(jsonUsageProfiles,
+                UsageProfile[][].class);
+
+        return usageProfiles;
+    }
+
     public void putBoolean(String key, boolean value) {
         prefsEditor.putBoolean(key, value);
     }
@@ -66,6 +79,13 @@ public class PreferencesUtil {
 
     public void putString(String key, String value) {
         prefsEditor.putString(key, value);
+    }
+
+    public void putUsageProfiles(UsageProfile[][] usageProfiles) {
+        Gson gson = new Gson();
+        String usageProfilesFLat = gson.toJson(usageProfiles);
+
+        prefsEditor.putString("USAGE_PROFILES", usageProfilesFLat);
     }
 
     public void remove(String key) {

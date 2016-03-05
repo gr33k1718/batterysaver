@@ -20,7 +20,5 @@ public class Constants {
     public static final String MOBILE_TRAFFIC_PREF = "mobileTraffic";
     public static final String CPU_LOAD_PREF = "cpuLoad";
     public static final String IS_CHARGING_PREF = "isCHarging";
-    public static final String AVG_WIFI = "avgWifi";
-    public static final String AVG_MOBILE = "avgMobile";
 
 }

@@ -12,7 +12,7 @@ import java.util.List;
 
 
 public class DatabaseLogger {
-
+    PreferencesUtil prefs = PreferencesUtil.getInstance(GlobalVars.getAppContext(), Constants.SYSTEM_CONTEXT_PREFS, Context.MODE_PRIVATE);
     private static final String DATABASE_NAME = "logs.db";
     private static final int DATABASE_VERSION = 4;
     private static final String LOG_TABLE_NAME = "logs";
@@ -96,6 +96,70 @@ public class DatabaseLogger {
         //editor.commit();
 
         return logs;
+    }
+
+    public UsageProfile[][] getIdlePeriods() {
+        final long MAX_IDLE = 120000;
+        final long MIN_HIGH_INTERACTION = 1800000;
+        final long MIN_HIGH_NETWORK = 1000000;
+        final float MIN_HIGH_CPU = 35;
+        final int MIN_BRIGHTNESS = 30;
+        final long MIN_TIMEOUT = 15000;
+        UsageProfile[][] group = new UsageProfile[7][24];
+
+        openDBs();
+
+        Cursor cursor = wdb.rawQuery("SELECT * FROM " + LOG_TABLE_NAME, null);
+
+        if (cursor.moveToFirst()) {
+            do {
+                int day = cursor.getInt(1) - 1;
+                int period = cursor.getInt(2);
+                long screen = cursor.getLong(7);
+                long networkTraffic = cursor.getLong(9);
+                float cpuLoad = cursor.getFloat(8);
+                int brightness = cursor.getInt(5);
+                long timeout = cursor.getLong(6);
+
+                UsageProfile usageProfile = new UsageProfile(brightness, timeout);
+
+                if (screen < MAX_IDLE) {
+                    usageProfile.setIdle(true);
+                } else if (screen > MIN_HIGH_INTERACTION) {
+                    int newBrightness = brightness / 2;
+
+                    if (newBrightness > MIN_BRIGHTNESS) {
+                        usageProfile.setBrightness(newBrightness);
+                    } else {
+                        usageProfile.setBrightness(MIN_BRIGHTNESS);
+                    }
+
+                    if (timeout != MIN_TIMEOUT) {
+                        usageProfile.setTimeout(MIN_TIMEOUT);
+                    }
+
+                    usageProfile.setHighInteraction(true);
+                }
+
+                if (networkTraffic > MIN_HIGH_NETWORK) {
+                    usageProfile.setHighNetwork(true);
+                }
+
+                if (cpuLoad > MIN_HIGH_CPU) {
+                    usageProfile.setHighCPU(true);
+                }
+
+                group[day][period] = usageProfile;
+
+            } while (cursor.moveToNext());
+        }
+
+        cursor.close();
+
+        prefs.putUsageProfiles(group);
+        prefs.commit();
+
+        return group;
     }
 
     public void logStatus(SystemContext info) {

@@ -27,7 +27,6 @@ public class LogService extends Service {
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "");
 
         wakeLock.acquire();
-
     }
 
     @Override
@@ -55,7 +54,7 @@ public class LogService extends Service {
         int isCharging, period, day, brightness, timeOut, status, batteryLevel;
         long interactionTime, screenOnTime, start;
         long[] trafficStats;
-        float cpuLoad;
+        double cpuLoad;
         SystemContext systemContext;
 
         Intent batteryIntent = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
