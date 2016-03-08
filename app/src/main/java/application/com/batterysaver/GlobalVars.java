@@ -8,17 +8,17 @@ public class GlobalVars extends Application {
 
     private static Context context;
 
-    public void onCreate() {
-        super.onCreate();
-        GlobalVars.context = getApplicationContext();
-    }
-
     public static Context getAppContext() {
         return GlobalVars.context;
     }
 
-    public static ContentResolver getContentRes(){
+    public static ContentResolver getContentRes() {
         return context.getContentResolver();
+    }
+
+    public void onCreate() {
+        super.onCreate();
+        GlobalVars.context = getApplicationContext();
     }
 
 }

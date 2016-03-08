@@ -1,24 +1,18 @@
 package application.com.batterysaver;
 
 import android.app.Activity;
-import android.app.ActivityManager;
 import android.app.AlertDialog;
-import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.TaskStackBuilder;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageManager;
+import android.content.IntentFilter;
+import android.net.ConnectivityManager;
+import android.os.BatteryManager;
 import android.os.Bundle;
-import android.provider.Settings;
 import android.support.v4.app.NotificationCompat;
-import android.telephony.CellInfoGsm;
-import android.telephony.CellSignalStrengthGsm;
-import android.telephony.TelephonyManager;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -29,8 +23,10 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import org.w3c.dom.Text;
-
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.Calendar;
 import java.util.List;
 
 public class LogsActivity extends Activity {
@@ -51,6 +47,10 @@ public class LogsActivity extends Activity {
         Intent intent = getIntent();
         value = intent.getIntExtra("key", 0);
 
+        Intent batteryIntent = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        int status = batteryIntent.getIntExtra(BatteryManager.EXTRA_VOLTAGE, -1);
+
+        tv.setText(""+ status);
         setupAdapter();
 
         removeItem();
@@ -135,19 +135,23 @@ public class LogsActivity extends Activity {
 
             @Override
             public void onClick(View v) {
-                Intent intentAirplaneMode = new Intent(Settings.ACTION_AIRPLANE_MODE_SETTINGS);
+                /*Intent intentAirplaneMode = new Intent(Settings.ACTION_AIRPLANE_MODE_SETTINGS);
                 intentAirplaneMode.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(intentAirplaneMode);
+                startActivity(intentAirplaneMode);*/
 
+                //setMobileDataEnabled(getApplicationContext(), false);
+
+                Calendar cal = Calendar.getInstance();
+                int day = cal.get(Calendar.DAY_OF_WEEK) - 2;
                 //Notify();
-                /*
+
                 DatabaseLogger d = new DatabaseLogger(getApplicationContext());
-                UsageProfile[][] b = d.getIdlePeriods();
-                for (int i = 0; i < 24; i++) {
-                    if (b[4][i] != null) {
-                        Log.d("[shit]", "\nTime: " + i + " " + b[4][i].toString());
-                    }
-                }
+                d.getUsagePatterns();
+                /*UsageProfile[] b = d.getUsagePatterns()[5];
+
+                for(UsageProfile c : b){
+                    Log.d("[shit]", "\nTime: "  + c.toString());
+                }*/
                 //Log.d("[shit]", "\nTime: " + b[3][8].toString());
                 /*List<ApplicationInfo> packages;
                 PackageManager pm;
@@ -175,7 +179,7 @@ public class LogsActivity extends Activity {
     }
 
 
-    private void Notify(){
+    private void Notify() {
         NotificationCompat.Builder mBuilder =
                 new NotificationCompat.Builder(this)
                         .setSmallIcon(R.drawable.ic_stat_name)
@@ -197,5 +201,39 @@ public class LogsActivity extends Activity {
                 (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 // mId allows you to update the notification later on.
         mNotificationManager.notify(0, mBuilder.build());
+    }
+
+    private void setMobileDataEnabled(Context context, boolean enabled) {
+        final ConnectivityManager conman = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        Class conmanClass = null;
+        try {
+            conmanClass = Class.forName(conman.getClass().getName());
+            final Field iConnectivityManagerField = conmanClass.getDeclaredField("mService");
+            iConnectivityManagerField.setAccessible(true);
+            final Object iConnectivityManager = iConnectivityManagerField.get(conman);
+            final Class iConnectivityManagerClass = Class.forName(iConnectivityManager.getClass().getName());
+            final Method setMobileDataEnabledMethod = iConnectivityManagerClass.getDeclaredMethod("setMobileDataEnabled", Boolean.TYPE);
+            setMobileDataEnabledMethod.setAccessible(true);
+            setMobileDataEnabledMethod.invoke(iConnectivityManager, enabled);
+        } catch (ClassNotFoundException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (NoSuchFieldException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (IllegalArgumentException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
     }
 }

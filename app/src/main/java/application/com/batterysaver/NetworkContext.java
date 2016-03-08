@@ -5,8 +5,6 @@ import android.net.ConnectivityManager;
 import android.net.TrafficStats;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
-import android.util.Log;
-import android.widget.Toast;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -14,12 +12,10 @@ import java.io.FileReader;
 import java.io.IOException;
 
 public class NetworkContext {
-    private static Context context = GlobalVars.getAppContext();
-    private static PreferencesUtil pref = PreferencesUtil.getInstance(context, Constants.NETWORK_PREFS, Context.MODE_PRIVATE);
-
     private static final String RX_FILE = "/sys/class/net/wlan0/statistics/rx_bytes";
     private static final String TX_FILE = "/sys/class/net/wlan0/statistics/tx_bytes";
-
+    private static Context context = GlobalVars.getAppContext();
+    private static PreferencesUtil pref = PreferencesUtil.getInstance(context, Constants.NETWORK_PREFS, Context.MODE_PRIVATE);
 
     public static long[] getTrafficStats() {
 
@@ -44,11 +40,11 @@ public class NetworkContext {
 
         pref.putLong("TOTAL_TRAFFIC", currentTotalBytes);
 
-        if(currentMobileStats == 0){
+        if (currentMobileStats == 0) {
             currentMobileStats = prevMobileStats;
         }
 
-        if(currentNetworkStats == 0){
+        if (currentNetworkStats == 0) {
             currentNetworkStats = prevNetworkStats;
         }
 
@@ -57,19 +53,17 @@ public class NetworkContext {
         long totalBytes = currentTotalBytes - prevTotalBytes;
 
 
-        if(is3g){
+        if (is3g) {
             long mobile = totalBytes - mobileTraffic;
             stats[0] = mobile > 0 ? mobile : 0;
             stats[1] = mobileTraffic;
             pref.putLong(Constants.MOBILE_TRAFFIC_PREF, currentMobileStats);
-        }
-        else if(isWifi){
+        } else if (isWifi) {
             long wifi = totalBytes - wifiTraffic;
             stats[0] = wifiTraffic;
             stats[1] = wifi > 0 ? wifi : 0;
             pref.putLong(Constants.NETWORK_TRAFFIC_PREF, currentNetworkStats);
-        }
-        else {
+        } else {
             stats[0] = 0;
             stats[1] = 0;
         }

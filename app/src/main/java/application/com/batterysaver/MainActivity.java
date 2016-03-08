@@ -41,9 +41,8 @@ public class MainActivity extends Activity {
         Toast.makeText(this, "" + isActive(), Toast.LENGTH_SHORT).show();
 
 
-
         //if(!isActive()){
-            scheduleAlarm();
+        scheduleAlarm();
         //}
 
     }
@@ -108,7 +107,7 @@ public class MainActivity extends Activity {
         gridview.setAdapter(gridAdapter);
     }
 
-    public boolean isActive(){
+    public boolean isActive() {
         return (PendingIntent.getService(this, 1, new Intent(this, LogService.class), PendingIntent.FLAG_NO_CREATE) != null);
     }
 }

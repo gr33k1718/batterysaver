@@ -1,7 +1,6 @@
 package application.com.batterysaver;
 
 import android.content.Context;
-import android.util.Log;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -24,7 +23,7 @@ public class CpuContext {
 
         //Log.d("[shit]", result +"\n" + prevCpuStats + "\n" + currentCpuStats);
 
-        return (double)Math.round(result * 100);
+        return (double) Math.round(result * 100);
     }
 
     public static void clear() {
@@ -51,7 +50,7 @@ public class CpuContext {
         long totald = total - prevTotal;
         long idled = idle2 - idle1;
 
-        float result = (float)(totald - idled) / totald;
+        float result = (float) (totald - idled) / totald;
 
         return result > 0 ? result : (float) idle2 / total;
     }
@@ -71,7 +70,7 @@ public class CpuContext {
                     break;
                 }
             }*/
-           // reader.seek(0);
+            // reader.seek(0);
             for (int y = 0; y < 2; y++) {
                 cpu = reader.readLine();
             }

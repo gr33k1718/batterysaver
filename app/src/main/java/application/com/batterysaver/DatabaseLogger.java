@@ -12,21 +12,40 @@ import java.util.List;
 
 
 public class DatabaseLogger {
-    PreferencesUtil prefs = PreferencesUtil.getInstance(GlobalVars.getAppContext(), Constants.SYSTEM_CONTEXT_PREFS, Context.MODE_PRIVATE);
     private static final String DATABASE_NAME = "logs.db";
     private static final int DATABASE_VERSION = 4;
     private static final String LOG_TABLE_NAME = "logs";
-
     private static final String KEY_ID = "_id";
-
     private final SQLOpenHelper mSQLOpenHelper;
+    PreferencesUtil prefs = PreferencesUtil.getInstance(GlobalVars.getAppContext(), Constants.SYSTEM_CONTEXT_PREFS, Context.MODE_PRIVATE);
     private SQLiteDatabase rdb;
     private SQLiteDatabase wdb;
+    private int count;
 
     public DatabaseLogger(Context context) {
         mSQLOpenHelper = new SQLOpenHelper(context);
 
         openDBs();
+    }
+
+    /* My cursor adapter was getting a bit complicated since it could only see one datum at a time, and
+       how I want to present the data depends on several interrelated factors.  Storing all three of
+       these items together simplifies things. */
+    private static int encodeStatus(int status, int plugged, int status_age) {
+        return status + (plugged * 10) + (status_age * 100);
+    }
+
+    /* Returns [status, plugged, status_age] */
+    public static int[] decodeStatus(int statusCode) {
+        int[] a = new int[3];
+
+        a[2] = statusCode / 100;
+        statusCode -= a[2] * 100;
+        a[1] = statusCode / 10;
+        statusCode -= a[1] * 10;
+        a[0] = statusCode;
+
+        return a;
     }
 
     private void openDBs() {
@@ -98,14 +117,21 @@ public class DatabaseLogger {
         return logs;
     }
 
-    public UsageProfile[][] getIdlePeriods() {
+    public UsageProfile[][] getUsagePatterns() {
+        UsageProfile prevUsage = null;
+        int totalBrightness = 0;
+        long totalTimeout = 0;
+        long totalInteraction = 0;
+        long totalNetwork = 0;
+        float totalCPU = 0;
+        int totalBatteryUsed;
+
         final long MAX_IDLE = 120000;
         final long MIN_HIGH_INTERACTION = 1800000;
         final long MIN_HIGH_NETWORK = 1000000;
         final float MIN_HIGH_CPU = 35;
-        final int MIN_BRIGHTNESS = 30;
-        final long MIN_TIMEOUT = 15000;
-        UsageProfile[][] group = new UsageProfile[7][24];
+
+        UsageProfile[][] group = new UsageProfile[8][24];
 
         openDBs();
 
@@ -115,29 +141,23 @@ public class DatabaseLogger {
             do {
                 int day = cursor.getInt(1) - 1;
                 int period = cursor.getInt(2);
+                int battery = cursor.getInt(3);
                 long screen = cursor.getLong(7);
                 long networkTraffic = cursor.getLong(9);
                 float cpuLoad = cursor.getFloat(8);
                 int brightness = cursor.getInt(5);
                 long timeout = cursor.getLong(6);
 
-                UsageProfile usageProfile = new UsageProfile(brightness, timeout);
+                UsageProfile usageProfile = new UsageProfile();
+                usageProfile.setDay(day);
+                usageProfile.setStart(period);
+                usageProfile.setBatteryLevel(battery);
 
+                //Determine usage type/s
                 if (screen < MAX_IDLE) {
                     usageProfile.setIdle(true);
+
                 } else if (screen > MIN_HIGH_INTERACTION) {
-                    int newBrightness = brightness / 2;
-
-                    if (newBrightness > MIN_BRIGHTNESS) {
-                        usageProfile.setBrightness(newBrightness);
-                    } else {
-                        usageProfile.setBrightness(MIN_BRIGHTNESS);
-                    }
-
-                    if (timeout != MIN_TIMEOUT) {
-                        usageProfile.setTimeout(MIN_TIMEOUT);
-                    }
-
                     usageProfile.setHighInteraction(true);
                 }
 
@@ -147,6 +167,60 @@ public class DatabaseLogger {
 
                 if (cpuLoad > MIN_HIGH_CPU) {
                     usageProfile.setHighCPU(true);
+                }
+
+                //Group similar profiles together and get sum/averages of stats
+                if (usageProfile.equals(prevUsage)) {
+                    count++;
+                    totalInteraction += screen;
+                    totalNetwork += (networkTraffic + cursor.getLong(10));
+                    totalBrightness += brightness;
+                    totalTimeout += timeout;
+                    totalCPU += cpuLoad;
+
+
+                } else {
+                    //Fix for under and overflow for periods
+                    int startDefault = period + 1;
+                    int endDefault = period - count;
+                    usageProfile.setEnd(startDefault == 24 ? 0 : startDefault);
+                    usageProfile.setStart(endDefault < 0 ? 24 - count : endDefault);
+
+                    if (prevUsage != null) {
+
+                        if (count > 0) {
+                            usageProfile.setBrightness(totalBrightness / count);
+                            usageProfile.setTimeout(totalTimeout / count);
+                            usageProfile.setCpu(totalCPU / count);
+                            usageProfile.setInteractionTime(totalInteraction);
+                            usageProfile.setNetworkUsage(totalNetwork);
+
+
+                        } else {
+                            usageProfile.setBrightness(brightness);
+                            usageProfile.setTimeout(timeout);
+                            usageProfile.setCpu(cpuLoad);
+                            usageProfile.setInteractionTime(screen);
+                            usageProfile.setNetworkUsage(networkTraffic);
+
+                        }
+
+                        //Determine battery usage for each profile. Default to 0 if charging
+                        totalBatteryUsed = prevUsage.getBatteryLevel() - usageProfile.getBatteryLevel();
+                        usageProfile.setBatteryUsed(totalBatteryUsed > -1 ? totalBatteryUsed : 0);
+                        //Log.d("[hi]", "Prev " + prevUsage);
+                        Log.d("[hi]", "Current " + usageProfile);
+                    }
+
+                    //Reset totals
+                    totalInteraction = 0;
+                    totalNetwork = 0;
+                    totalBrightness = 0;
+                    totalTimeout = 0;
+                    totalCPU = 0;
+                    count = 0;
+                    prevUsage = usageProfile;
+
                 }
 
                 group[day][period] = usageProfile;
@@ -186,7 +260,6 @@ public class DatabaseLogger {
         }
     }
 
-
     public void deleteLog(String id) {
 
         openDBs();
@@ -196,26 +269,6 @@ public class DatabaseLogger {
         } catch (Exception e) {
             // Maybe storage is full?  Okay to just return rather than crash.
         }
-    }
-
-    /* My cursor adapter was getting a bit complicated since it could only see one datum at a time, and
-       how I want to present the data depends on several interrelated factors.  Storing all three of
-       these items together simplifies things. */
-    private static int encodeStatus(int status, int plugged, int status_age) {
-        return status + (plugged * 10) + (status_age * 100);
-    }
-
-    /* Returns [status, plugged, status_age] */
-    public static int[] decodeStatus(int statusCode) {
-        int[] a = new int[3];
-
-        a[2] = statusCode / 100;
-        statusCode -= a[2] * 100;
-        a[1] = statusCode / 10;
-        statusCode -= a[1] * 10;
-        a[0] = statusCode;
-
-        return a;
     }
 
     public void clearAllLogs() {

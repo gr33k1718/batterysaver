@@ -6,18 +6,15 @@ import android.os.Build;
 
 import com.google.gson.Gson;
 
-import java.util.List;
-
 /**
  * Created by gr33k1718 on 20/02/2016.
  */
 public class PreferencesUtil {
 
+    private static PreferencesUtil sInstance;
     SharedPreferences prefs;
     SharedPreferences.Editor prefsEditor;
     private Context mAppContext;
-    private static PreferencesUtil sInstance;
-
     private boolean mUseApply;
 
     //Set to private

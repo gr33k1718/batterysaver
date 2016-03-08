@@ -8,6 +8,8 @@ import android.net.wifi.WifiManager;
 import android.provider.Settings;
 import android.widget.Toast;
 
+import java.util.Calendar;
+
 public class DisplayContext {
     private static Context context = GlobalVars.getAppContext();
 
@@ -33,12 +35,13 @@ public class DisplayContext {
 
     public static class InteractionTimer {
         private static PreferencesUtil pref = PreferencesUtil.getInstance(context, Constants.SCREEN_TIME_PREFS, Context.MODE_PRIVATE);
+
         private static WifiManager wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
         private static long screenOnStartTime = 0;
         private static long screenOnEndTime = 0;
         private static long screenOnTime = 0;
 
-        public static BroadcastReceiver setupTimer() {
+        public static BroadcastReceiver setupTimer(/*final boolean isIdle*/) {
 
             BroadcastReceiver screenOnTimerReceiver = new BroadcastReceiver() {
 
@@ -51,7 +54,9 @@ public class DisplayContext {
 
                         pref.commit();
                         Toast.makeText(context, "Total time " + convertMillisecondsToHMmSs(loadTime(Constants.SCREEN_ON_TIME_PREF)), Toast.LENGTH_SHORT).show();
-                        //wifiManager.setWifiEnabled(true);
+                       /* if (isIdle) {
+                            wifiManager.setWifiEnabled(true);
+                        }*/
                     } else if (intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
                         long startTime = pref.getLong(Constants.SCREEN_ON_START_TIME_PREF, 0);
                         long prevTime = pref.getLong(Constants.SCREEN_ON_TIME_PREF, 0);
@@ -62,7 +67,12 @@ public class DisplayContext {
                         pref.putLong(Constants.SCREEN_ON_TIME_PREF, prevTime + screenOnTime);
 
                         pref.commit();
-                        //wifiManager.setWifiEnabled(false);
+                       /* if(isIdle){
+                            wifiManager.setWifiEnabled(false);
+                        }
+                        else{
+                            wifiManager.setWifiEnabled(true);
+                        }*/
                     }
                 }
             };
