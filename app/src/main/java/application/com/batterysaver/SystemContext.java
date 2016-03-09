@@ -12,12 +12,12 @@ public class SystemContext {
     public long networkTraffic;
     public long mobileTraffic;
     public long interactionTime;
-    public double cpuLoad;
+    public int cpuLoad;
     public int day;
     public int charging;
 
     public SystemContext(int day, int period, int charging, int brightness, int batteryLevel, int timeOut, long networkTraffic,
-                         long mobileTraffic, long interactionTime, double cpuLoad) {
+                         long mobileTraffic, long interactionTime, int cpuLoad) {
         this.day = day;
         this.period = period;
         this.brightness = brightness;

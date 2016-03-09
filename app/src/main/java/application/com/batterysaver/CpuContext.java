@@ -11,7 +11,7 @@ public class CpuContext {
     private static Context context = GlobalVars.getAppContext();
     private static PreferencesUtil pref = PreferencesUtil.getInstance(context, Constants.SYSTEM_CONTEXT_PREFS, Context.MODE_PRIVATE);
 
-    public static double getLoad() {
+    public static int getLoad() {
 
         String prevCpuStats = pref.getString(Constants.CPU_LOAD_PREF, "cpu  0 0 0 0 0 0 0 0 0 0");
         String currentCpuStats = readCpuUsage().cpu;
@@ -23,7 +23,7 @@ public class CpuContext {
 
         //Log.d("[shit]", result +"\n" + prevCpuStats + "\n" + currentCpuStats);
 
-        return (double) Math.round(result * 100);
+        return  Math.round(result * 100);
     }
 
     public static void clear() {

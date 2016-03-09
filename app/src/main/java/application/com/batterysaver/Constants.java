@@ -21,4 +21,7 @@ public class Constants {
     public static final String CPU_LOAD_PREF = "cpuLoad";
     public static final String IS_CHARGING_PREF = "isCHarging";
 
+    public static final String LOG_TABLE_NAME_ONE = "logs";
+    public static final String LOG_TABLE_NAME_TWO = "logs_two";
+
 }

@@ -166,7 +166,6 @@ public class UsageProfile {
                 "day=" + day +
                 ", start=" + start +
                 ", end=" + end +
-                ", battery level =" + batteryLevel +
                 ", battery used =" + batteryUsed +
                 ", networkUsage=" + networkUsage +
                 ", interactionTime=" + interactionTime +

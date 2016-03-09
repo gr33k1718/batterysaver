@@ -54,7 +54,7 @@ public class LogService extends Service {
         int isCharging, period, day, brightness, timeOut, status, batteryLevel;
         long interactionTime, screenOnTime, start;
         long[] trafficStats;
-        double cpuLoad;
+        int cpuLoad;
         SystemContext systemContext;
 
         Intent batteryIntent = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));

@@ -141,12 +141,17 @@ public class LogsActivity extends Activity {
 
                 //setMobileDataEnabled(getApplicationContext(), false);
 
-                Calendar cal = Calendar.getInstance();
+                /*Calendar cal = Calendar.getInstance();
                 int day = cal.get(Calendar.DAY_OF_WEEK) - 2;
                 //Notify();
 
+
+*/
                 DatabaseLogger d = new DatabaseLogger(getApplicationContext());
-                d.getUsagePatterns();
+                //d.fill(null);
+                //d.clearAllLogs();
+
+                d.getUsagePatterns(Constants.LOG_TABLE_NAME_TWO);
                 /*UsageProfile[] b = d.getUsagePatterns()[5];
 
                 for(UsageProfile c : b){
