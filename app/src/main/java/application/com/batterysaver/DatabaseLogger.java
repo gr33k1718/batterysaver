@@ -7,6 +7,7 @@ import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -20,7 +21,6 @@ public class DatabaseLogger {
     PreferencesUtil prefs = PreferencesUtil.getInstance(GlobalVars.getAppContext(), Constants.SYSTEM_CONTEXT_PREFS, Context.MODE_PRIVATE);
     private SQLiteDatabase rdb;
     private SQLiteDatabase wdb;
-    private int count;
 
     public DatabaseLogger(Context context) {
         mSQLOpenHelper = new SQLOpenHelper(context);
@@ -96,19 +96,19 @@ public class DatabaseLogger {
 
     public UsageProfile[][] getUsagePatterns(String name) {
         UsageProfile prevUsage = null;
-        int totalBrightness = 0;
-        long totalTimeout = 0;
-        long totalInteraction = 0;
-        long totalNetwork = 0;
-        float totalCPU = 0;
-        int totalBatteryUsed;
+        UsageProfile currentUsage = null;
+        int singlePeriod = 0;
+        int multiPeriod = 0;
+        int totalBatteryUsed = 0;
+
+        boolean first = true;
 
         final long MAX_IDLE = 120000;
         final long MIN_HIGH_INTERACTION = 1800000;
         final long MIN_HIGH_NETWORK = 1000000;
         final float MIN_HIGH_CPU = 35;
 
-        UsageProfile[][] group = new UsageProfile[8][24];
+        UsageProfile[][] group = new UsageProfile[7][24];
 
         openDBs();
 
@@ -116,91 +116,65 @@ public class DatabaseLogger {
 
         if (cursor.moveToFirst()) {
             do {
-                int day = cursor.getInt(1) - 1;
-                int period = cursor.getInt(2);
-                int battery = cursor.getInt(3);
-                long screen = cursor.getLong(7);
-                long networkTraffic = cursor.getLong(9);
-                float cpuLoad = cursor.getFloat(8);
-                int brightness = cursor.getInt(5);
-                long timeout = cursor.getLong(6);
+                    int day = cursor.getInt(1) - 1;
+                    int period = cursor.getInt(2);
+                    int battery = cursor.getInt(3);
+                    long screen = cursor.getLong(7);
+                    long networkTraffic = cursor.getLong(9) + cursor.getLong(10);
+                    float cpuLoad = cursor.getFloat(8);
+                    int brightness = cursor.getInt(5);
+                    long timeout = cursor.getLong(6);
 
-                UsageProfile usageProfile = new UsageProfile();
-                usageProfile.setDay(day);
-                usageProfile.setStart(period);
-                usageProfile.setBatteryLevel(battery);
+                    currentUsage = new UsageProfile(day,period,period + 1 != 24 ? period + 1 : 0,
+                            brightness,timeout,battery,networkTraffic,screen,cpuLoad);
 
-                //Determine usage type/s
-                if (screen < MAX_IDLE) {
-                    usageProfile.setIdle(true);
+                    //Determine usage type/s
+                    if (screen < MAX_IDLE) {
+                        currentUsage.setIdle(true);
 
-                } else if (screen > MIN_HIGH_INTERACTION) {
-                    usageProfile.setHighInteraction(true);
-                }
-
-                if (networkTraffic > MIN_HIGH_NETWORK) {
-                    usageProfile.setHighNetwork(true);
-                }
-
-                if (cpuLoad > MIN_HIGH_CPU) {
-                    usageProfile.setHighCPU(true);
-                }
-
-                //Group similar profiles together and get sum/averages of stats
-                if (usageProfile.equals(prevUsage)) {
-                    count++;
-                    totalInteraction += screen;
-                    totalNetwork += (networkTraffic + cursor.getLong(10));
-                    totalBrightness += brightness;
-                    totalTimeout += timeout;
-                    totalCPU += cpuLoad;
-
-
-                } else {
-                    //Fix for under and overflow for periods
-                    int startDefault = period + 1;
-                    int endDefault = period - count;
-                    usageProfile.setEnd(startDefault == 24 ? 0 : startDefault);
-                    usageProfile.setStart(endDefault < 0 ? 24 - count : endDefault);
-
-                    if (prevUsage != null) {
-
-                        if (count > 0) {
-                            usageProfile.setBrightness(totalBrightness / count);
-                            usageProfile.setTimeout(totalTimeout / count);
-                            usageProfile.setCpu(totalCPU / count);
-                            usageProfile.setInteractionTime(totalInteraction);
-                            usageProfile.setNetworkUsage(totalNetwork);
-
-
-                        } else {
-                            usageProfile.setBrightness(brightness);
-                            usageProfile.setTimeout(timeout);
-                            usageProfile.setCpu(cpuLoad);
-                            usageProfile.setInteractionTime(screen);
-                            usageProfile.setNetworkUsage(networkTraffic);
-
-                        }
-
-                        //Determine battery usage for each profile. Default to 0 if charging
-                        totalBatteryUsed = prevUsage.getBatteryLevel() - usageProfile.getBatteryLevel();
-                        usageProfile.setBatteryUsed(totalBatteryUsed > -1 ? totalBatteryUsed : 0);
-                        //Log.d("[hi]", "Prev " + prevUsage);
-                        Log.d("[hi]", "Current " + usageProfile);
-                        group[day][period] = usageProfile;
+                    } else if (screen > MIN_HIGH_INTERACTION) {
+                        currentUsage.setHighInteraction(true);
                     }
 
-                    //Reset totals
-                    totalInteraction = 0;
-                    totalNetwork = 0;
-                    totalBrightness = 0;
-                    totalTimeout = 0;
-                    totalCPU = 0;
-                    count = 0;
-                    prevUsage = usageProfile;
+                    if (networkTraffic > MIN_HIGH_NETWORK) {
+                        currentUsage.setHighNetwork(true);
+                    }
 
-                }
+                    if (cpuLoad > MIN_HIGH_CPU) {
+                        currentUsage.setHighCPU(true);
+                    }
 
+                    if(prevUsage != null){
+
+
+                        if(currentUsage.equals(prevUsage)){
+                            if(first){
+                                totalBatteryUsed = prevUsage.getBatteryLevel();
+                                first = false;
+                            }
+                            prevUsage = currentUsage.merge(prevUsage);
+
+                        }
+                        else{
+                            //If phone was charging over the period return 0
+                            if(prevUsage.getEnd() - prevUsage.getStart() > 1){
+                                multiPeriod  = totalBatteryUsed - currentUsage.getBatteryLevel();
+                                prevUsage.setBatteryUsed(multiPeriod > 0 ? multiPeriod : 0);
+                            }
+                            else{
+                                singlePeriod = prevUsage.getBatteryLevel() - currentUsage.getBatteryLevel();
+                                prevUsage.setBatteryUsed(singlePeriod > 0 ? singlePeriod : 0);
+                            }
+
+                            Log.d("[hi]", "\n\nPrev " + prevUsage + " " + totalBatteryUsed);
+                            group[prevUsage.getDay()][period] = prevUsage;
+                            prevUsage = currentUsage;
+                            first = true;
+                        }
+                    }
+                    else{
+                        prevUsage = currentUsage;
+                    }
 
 
             } while (cursor.moveToNext());
@@ -214,19 +188,36 @@ public class DatabaseLogger {
         return group;
     }
 
-    public void fill(SystemContext info) {
+
+    public void fill(SystemContext info, String day) {
         ArrayList<String> shit = new ArrayList<String>();
 
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (25, 3, 0, 100, 1, 255, 15000, 42776, 14, 330537, 0)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (26, 5, 1, 100, 1, 255, 15000, 0, 9, 233511, 0)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (27, 5, 2, 100, 1, 255, 15000, 0, 10, 91200, 0)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (28, 5, 3, 100, 1, 255, 15000, 0, 12, 388407, 0)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (29, 5, 4, 100, 1, 255, 15000, 0, 11, 146543, 0)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (30, 5, 5, 100, 1, 255, 15000, 0, 14, 144819, 0)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (31, 5, 6, 100, 1, 255, 15000, 5647, 17, 93199, 0)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (32, 5, 7, 100, 1, 255, 15000, 140837, 18, 147725, 0)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (33, 5, 8, 100, 1, 255, 15000, 0, 12, 161333, 0)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (35, 5, 11, 100, 1, 255, 15000, 0, 16, 341244, 0)");
+        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 0, 100, 1, 255, 15000, 0, 10, 47331, 0)");
+        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 1, 100, 1, 255, 15000, 0, 11, 98742, 0)");
+        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 2, 100, 1, 255, 15000, 0, 12, 12313, 0)");
+        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 3, 100, 1, 255, 15000, 0, 7, 9064, 0)");
+        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 4, 100, 1, 255, 15000, 0, 8, 5324, 0)");
+        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 5, 100, 1, 255, 15000, 0, 5, 4232, 0)");
+        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 6, 100, 1, 255, 15000, 0, 9, 13441, 0)");
+        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 7, 100, 1, 255, 15000, 42776, 16, 5532, 0)");
+        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 8, 98, 0, 255, 15000, 637731, 19, 3123441, 0)");
+        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 9, 95, 0, 255, 15000, 12331, 15, 33133, 0)");
+
+        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 10, 95, 0, 255, 15000, 60003, 13, 44332, 0)");
+        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 11, 94, 0, 255, 15000, 65544, 19, 88754, 0)");
+        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 12, 93, 0, 255, 15000, 32455, 14, 65245, 0)");
+        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 13, 92, 0, 255, 15000, 1904437, 32, 0, 4344552)");
+        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 14, 88, 0, 255, 15000, 31244, 21, 77644, 0)");
+        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 15, 87, 0, 255, 15000, 77765, 14, 76543, 0)");
+        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 16, 86, 0, 255, 15000, 1008390, 19, 54344, 0)");
+        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 17, 84, 0, 255, 15000, 42776, 14, 55231, 0)");
+        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 18, 82, 0, 255, 15000, 1033382, 28, 3455515, 0)");
+        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 19, 78, 0, 255, 15000, 1848470, 35, 985893, 0)");
+
+        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 20, 76, 0, 255, 15000, 1198977, 19, 441088, 0)");
+        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 21, 77, 1, 255, 15000, 32333, 17, 42233, 0)");
+        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 22, 96, 1, 255, 15000, 20039, 21, 245535, 0)");
+        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 23, 100, 1, 255, 15000, 0, 16, 321345, 0)");
 
 
 
@@ -261,17 +252,18 @@ public class DatabaseLogger {
         String logItem;
 
         //Get previous row and determine weighted average
+
         try {
             Cursor cursor = wdb.rawQuery("SELECT * FROM " + Constants.LOG_TABLE_NAME_TWO +
                     " WHERE " + Constants.DAY_PREF + " = " + info.day + " AND "
-                    + Constants.PERIOD_PREF + " = " + info.period,null);
-            if(cursor.getCount() > 0) {
+                    + Constants.PERIOD_PREF + " = " + info.period, null);
+            if (cursor.getCount() > 0) {
 
                 cursor.moveToFirst();
-                 screen = cursor.getLong(7);
-                 networkTraffic = cursor.getLong(9);
-                 mobileTraffic = cursor.getLong(10);
-                 cpuLoad = cursor.getInt(8);
+                screen = cursor.getLong(7);
+                networkTraffic = cursor.getLong(9);
+                mobileTraffic = cursor.getLong(10);
+                cpuLoad = cursor.getInt(8);
 
                 logItem = cursor.getString(0) + " "
                         + cursor.getString(1) + " "
@@ -285,15 +277,19 @@ public class DatabaseLogger {
                         + cursor.getString(9) + " "
                         + cursor.getString(10);
 
-                Log.d("[data]", logItem + "\nCurrent " + info.cpuLoad);
 
-
+                String a = info.day + " ,"
+                        + info.period + " ,"
+                        + info.batteryLevel + " ,"
+                        + info.charging + " ,"
+                        + info.brightness + " ,"
+                        + info.timeOut + " ,"
+                        + info.interactionTime + " ,"
+                        + info.cpuLoad + " ,"
+                        + info.networkTraffic + " ,"
+                        + info.mobileTraffic;
+                Log.d("[bollocks]", logItem + "\nCurrent " + a);
             }
-        } catch (Exception e) {
-            Log.d("[data]", e.toString());
-        }
-
-        try {
             wdb.execSQL("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, "
                     + info.day + " ,"
                     + info.period + " ,"
@@ -306,10 +302,10 @@ public class DatabaseLogger {
                     + getWeightedAverage(networkTraffic, info.networkTraffic) + " ,"
                     + getWeightedAverage(mobileTraffic, info.mobileTraffic)
                     + ")");
-
+            Log.d("[bollocks]", "hi");
             close();
-        } catch (Exception e) {
-            Log.d("[data]", e.toString());
+        }catch (Exception e) {
+            Log.d("[bollocks]", e.toString());
         }
 
 

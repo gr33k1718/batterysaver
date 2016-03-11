@@ -19,11 +19,29 @@ public class UsageProfile {
     private float cpu;
     private int batteryLevel;
     private int batteryUsed;
+    private int period;
 
-    public UsageProfile() {
+    public UsageProfile(){}
+
+    public UsageProfile(int day, int start, int end, int brightness, long timeout,  int batteryLevel, long networkUsage, long interactionTime, float cpu) {
+        this.brightness = brightness;
+        this.timeout = timeout;
+        this.day = day;
+        this.start = start;
+        this.networkUsage = networkUsage;
+        this.interactionTime = interactionTime;
+        this.cpu = cpu;
+        this.batteryLevel = batteryLevel;
+        this.end = end;
     }
 
+    public int getPeriod() {
+        return period;
+    }
 
+    public void setPeriod(int period) {
+        this.period = period;
+    }
 
     public boolean isHighInteraction() {
         return highInteraction;
@@ -65,12 +83,12 @@ public class UsageProfile {
         this.timeout = timeout;
     }
 
-    public boolean isHighNetwork() {
-        return highNetwork;
-    }
-
     public void setHighNetwork(boolean highNetwork) {
         this.highNetwork = highNetwork;
+    }
+
+    public boolean isHighNetwork() {
+        return highNetwork;
     }
 
     public boolean isHighCPU() {
@@ -158,6 +176,24 @@ public class UsageProfile {
         if (isHighInteraction() != that.isHighInteraction()) return false;
         return getDay() == that.getDay();
 
+    }
+
+    public UsageProfile merge(UsageProfile prev){
+        prev.setNetworkUsage((this.getNetworkUsage() + prev.getNetworkUsage()));
+        prev.setInteractionTime((this.getInteractionTime() + prev.getInteractionTime()));
+        prev.setCpu((this.getCpu() + prev.getCpu()) / 2);
+        prev.setBrightness((this.getBrightness() + prev.getBrightness()) / 2);
+        prev.setTimeout((this.getTimeout() + prev.getTimeout()) / 2);
+        prev.setStart(prev.getStart());
+        prev.setBatteryLevel(this.getBatteryLevel());
+        prev.setEnd(this.getEnd());
+        prev.setDay(this.getDay());
+        prev.setIdle(this.isIdle());
+        prev.setHighCPU(this.isHighCPU());
+        prev.setHighNetwork(this.isHighNetwork());
+        prev.setHighInteraction(this.isHighInteraction());
+
+        return prev;
     }
 
     @Override

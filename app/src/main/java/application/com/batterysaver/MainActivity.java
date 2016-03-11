@@ -42,7 +42,7 @@ public class MainActivity extends Activity {
 
 
         //if(!isActive()){
-        scheduleAlarm();
+        //scheduleAlarm();
         //}
 
     }

@@ -13,6 +13,7 @@ import android.net.ConnectivityManager;
 import android.os.BatteryManager;
 import android.os.Bundle;
 import android.support.v4.app.NotificationCompat;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -28,6 +29,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Random;
 
 public class LogsActivity extends Activity {
     private ListView lv;
@@ -144,19 +146,23 @@ public class LogsActivity extends Activity {
                 /*Calendar cal = Calendar.getInstance();
                 int day = cal.get(Calendar.DAY_OF_WEEK) - 2;
                 //Notify();
-
-
 */
-                DatabaseLogger d = new DatabaseLogger(getApplicationContext());
-                //d.fill(null);
-                //d.clearAllLogs();
 
-                d.getUsagePatterns(Constants.LOG_TABLE_NAME_TWO);
-                /*UsageProfile[] b = d.getUsagePatterns()[5];
+                DatabaseLogger d = new DatabaseLogger(getApplicationContext());
+                //d.copyTable();
+                //d.fill(null, "2");
+
+                //d.getUsagePatterns(Constants.LOG_TABLE_NAME_ONE);
+                UsageProfile[] b = d.getUsagePatterns(Constants.LOG_TABLE_NAME_ONE)[2];
 
                 for(UsageProfile c : b){
-                    Log.d("[shit]", "\nTime: "  + c.toString());
-                }*/
+                    if(c != null){
+                        Log.d("[shit]", "\nTime: "  + c.toString());
+
+                    }
+                }
+
+
                 //Log.d("[shit]", "\nTime: " + b[3][8].toString());
                 /*List<ApplicationInfo> packages;
                 PackageManager pm;
