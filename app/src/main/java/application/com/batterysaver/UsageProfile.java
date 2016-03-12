@@ -20,10 +20,11 @@ public class UsageProfile {
     private int batteryLevel;
     private int batteryUsed;
     private int period;
+    private int charging;
 
     public UsageProfile(){}
 
-    public UsageProfile(int day, int start, int end, int brightness, long timeout,  int batteryLevel, long networkUsage, long interactionTime, float cpu) {
+    public UsageProfile(int day, int start, int end, int charging, int brightness, long timeout,  int batteryLevel, long networkUsage, long interactionTime, float cpu) {
         this.brightness = brightness;
         this.timeout = timeout;
         this.day = day;
@@ -33,6 +34,7 @@ public class UsageProfile {
         this.cpu = cpu;
         this.batteryLevel = batteryLevel;
         this.end = end;
+        this.charging = charging;
     }
 
     public int getPeriod() {

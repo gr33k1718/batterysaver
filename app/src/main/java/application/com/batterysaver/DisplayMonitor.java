@@ -10,7 +10,7 @@ import android.widget.Toast;
 
 import java.util.Calendar;
 
-public class DisplayContext {
+public class DisplayMonitor {
     private static Context context = GlobalVars.getAppContext();
 
     public static int screenBrightness() {

@@ -119,6 +119,7 @@ public class DatabaseLogger {
                     int day = cursor.getInt(1) - 1;
                     int period = cursor.getInt(2);
                     int battery = cursor.getInt(3);
+                    int charging = cursor.getInt(4);
                     long screen = cursor.getLong(7);
                     long networkTraffic = cursor.getLong(9) + cursor.getLong(10);
                     float cpuLoad = cursor.getFloat(8);
@@ -126,7 +127,7 @@ public class DatabaseLogger {
                     long timeout = cursor.getLong(6);
 
                     currentUsage = new UsageProfile(day,period,period + 1 != 24 ? period + 1 : 0,
-                            brightness,timeout,battery,networkTraffic,screen,cpuLoad);
+                            charging, brightness,timeout,battery,networkTraffic,screen,cpuLoad);
 
                     //Determine usage type/s
                     if (screen < MAX_IDLE) {
@@ -167,7 +168,7 @@ public class DatabaseLogger {
                             }
 
                             Log.d("[hi]", "\n\nPrev " + prevUsage + " " + totalBatteryUsed);
-                            group[prevUsage.getDay()][period] = prevUsage;
+                            group[prevUsage.getDay()][prevUsage.getStart()] = prevUsage;
                             prevUsage = currentUsage;
                             first = true;
                         }

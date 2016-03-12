@@ -11,7 +11,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 
-public class NetworkContext {
+public class NetworkMonitor {
     private static final String RX_FILE = "/sys/class/net/wlan0/statistics/rx_bytes";
     private static final String TX_FILE = "/sys/class/net/wlan0/statistics/tx_bytes";
     private static Context context = GlobalVars.getAppContext();

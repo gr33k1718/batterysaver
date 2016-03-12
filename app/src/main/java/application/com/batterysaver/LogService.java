@@ -66,24 +66,24 @@ public class LogService extends Service {
         period = cal.get(Calendar.HOUR_OF_DAY);
         day = cal.get(Calendar.DAY_OF_WEEK);
         batteryLevel = batteryIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
-        trafficStats = NetworkContext.getTrafficStats();
-        cpuLoad = CpuContext.getLoad();
-        brightness = DisplayContext.screenBrightness();
-        timeOut = DisplayContext.screenTimeout();
+        trafficStats = NetworkMonitor.getTrafficStats();
+        cpuLoad = CpuMonitor.getLoad();
+        brightness = DisplayMonitor.screenBrightness();
+        timeOut = DisplayMonitor.screenTimeout();
         isCharging = (status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL) ? 1 : 0;
 
         if (!powerManager.isInteractive()) {
-            interactionTime = DisplayContext.loadTime(Constants.SCREEN_ON_TIME_PREF);
-            DisplayContext.saveTime(0l, Constants.SCREEN_ON_START_TIME_PREF);
+            interactionTime = DisplayMonitor.loadTime(Constants.SCREEN_ON_TIME_PREF);
+            DisplayMonitor.saveTime(0l, Constants.SCREEN_ON_START_TIME_PREF);
         } else {
-            start = DisplayContext.loadTime(Constants.SCREEN_ON_START_TIME_PREF);
-            screenOnTime = DisplayContext.loadTime(Constants.SCREEN_ON_TIME_PREF);
+            start = DisplayMonitor.loadTime(Constants.SCREEN_ON_START_TIME_PREF);
+            screenOnTime = DisplayMonitor.loadTime(Constants.SCREEN_ON_TIME_PREF);
             interactionTime = (System.currentTimeMillis() - start) + screenOnTime;
-            DisplayContext.saveTime(System.currentTimeMillis(), Constants.SCREEN_ON_START_TIME_PREF);
+            DisplayMonitor.saveTime(System.currentTimeMillis(), Constants.SCREEN_ON_START_TIME_PREF);
         }
 
-        DisplayContext.clearTime();
-        //NetworkContext.clearTraffic();
+        DisplayMonitor.clearTime();
+        //NetworkMonitor.clearTraffic();
 
         systemContext = new SystemContext(day, period, isCharging, brightness, batteryLevel,
                 timeOut, trafficStats[0], trafficStats[1], interactionTime, cpuLoad);
@@ -98,7 +98,6 @@ public class LogService extends Service {
         stopService(new Intent(this, ScreenOnService.class));
         startService(new Intent(this, ScreenOnService.class));
     }
-
 
 }
 

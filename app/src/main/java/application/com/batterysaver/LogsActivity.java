@@ -1,6 +1,7 @@
 package application.com.batterysaver;
 
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.app.AlertDialog;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -9,6 +10,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.os.BatteryManager;
 import android.os.Bundle;
@@ -24,10 +26,14 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
@@ -137,6 +143,16 @@ public class LogsActivity extends Activity {
 
             @Override
             public void onClick(View v) {
+                new Thread(new Runnable() {
+                    public void run() {
+                        for (String i : getCPU()) {
+                            String[] bla = i.split(" +");
+                            Log.d("[shit]", "\nTime: " + bla[2]);
+
+                        }
+                    }
+                }).start();
+
                 /*Intent intentAirplaneMode = new Intent(Settings.ACTION_AIRPLANE_MODE_SETTINGS);
                 intentAirplaneMode.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivity(intentAirplaneMode);*/
@@ -147,7 +163,7 @@ public class LogsActivity extends Activity {
                 int day = cal.get(Calendar.DAY_OF_WEEK) - 2;
                 //Notify();
 */
-
+/*
                 DatabaseLogger d = new DatabaseLogger(getApplicationContext());
                 //d.copyTable();
                 //d.fill(null, "2");
@@ -155,12 +171,12 @@ public class LogsActivity extends Activity {
                 //d.getUsagePatterns(Constants.LOG_TABLE_NAME_ONE);
                 UsageProfile[] b = d.getUsagePatterns(Constants.LOG_TABLE_NAME_ONE)[2];
 
-                for(UsageProfile c : b){
-                    if(c != null){
-                        Log.d("[shit]", "\nTime: "  + c.toString());
+                for (UsageProfile c : b) {
+                    if (c != null) {
+                        Log.d("[shit]", "\nTime: " + c.toString());
 
                     }
-                }
+                }*/
 
 
                 //Log.d("[shit]", "\nTime: " + b[3][8].toString());
@@ -214,37 +230,38 @@ public class LogsActivity extends Activity {
         mNotificationManager.notify(0, mBuilder.build());
     }
 
-    private void setMobileDataEnabled(Context context, boolean enabled) {
-        final ConnectivityManager conman = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-        Class conmanClass = null;
+    public ArrayList<String> getCPU(){
+        ArrayList<String> list = new ArrayList<String>();
         try {
-            conmanClass = Class.forName(conman.getClass().getName());
-            final Field iConnectivityManagerField = conmanClass.getDeclaredField("mService");
-            iConnectivityManagerField.setAccessible(true);
-            final Object iConnectivityManager = iConnectivityManagerField.get(conman);
-            final Class iConnectivityManagerClass = Class.forName(iConnectivityManager.getClass().getName());
-            final Method setMobileDataEnabledMethod = iConnectivityManagerClass.getDeclaredMethod("setMobileDataEnabled", Boolean.TYPE);
-            setMobileDataEnabledMethod.setAccessible(true);
-            setMobileDataEnabledMethod.invoke(iConnectivityManager, enabled);
-        } catch (ClassNotFoundException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (NoSuchFieldException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (IllegalArgumentException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (NoSuchMethodException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
+            // -m 10, how many entries you want, -d 1, delay by how much, -n 1,
+            // number of iterations
+            Process p = Runtime.getRuntime().exec("top -m 5 -d 5 -n 1");
 
+            BufferedReader reader = new BufferedReader(new InputStreamReader(
+                    p.getInputStream()));
+            int i = 0;
+            String line ;
+            String finalString;
+            while ((line = reader.readLine()) != null) {
+                finalString = line.trim();
+                if(!line.isEmpty() && Character.isDigit(finalString.charAt(0))){
+                    finalString = line.replace("%","");
+                    Log.e("Output ", finalString);
+                    list.add(finalString);
+                }
+
+                //line = reader.readLine();
+            }
+
+            p.waitFor();
+
+            //Toast.makeText(getBaseContext(), "Got update",Toast.LENGTH_SHORT).show();
+
+        } catch (Exception e) {
+            //e.printStackTrace();
+            //Toast.makeText(getBaseContext(), "Caught", Toast.LENGTH_SHORT).show();
+        }
+        return list;
     }
+
 }
