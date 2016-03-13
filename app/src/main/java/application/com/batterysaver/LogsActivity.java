@@ -12,6 +12,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
+import android.net.TrafficStats;
 import android.os.BatteryManager;
 import android.os.Bundle;
 import android.support.v4.app.NotificationCompat;
@@ -43,10 +44,12 @@ public class LogsActivity extends Activity {
     private List<String> logs;
     private Adapter listAdapter;
     private TextView tv;
+    private PreferencesUtil pref;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        pref = PreferencesUtil.getInstance(getApplicationContext(), Constants.NETWORK_PREFS, Context.MODE_PRIVATE);
         this.requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.logs_main);
         lv = (ListView) findViewById(R.id.mylist);
@@ -143,15 +146,9 @@ public class LogsActivity extends Activity {
 
             @Override
             public void onClick(View v) {
-                new Thread(new Runnable() {
-                    public void run() {
-                        for (String i : getCPU()) {
-                            String[] bla = i.split(" +");
-                            Log.d("[shit]", "\nTime: " + bla[2]);
+                /*
 
-                        }
-                    }
-                }).start();
+                Log.d("[shit]", "\nTime: " + (currentTotalBytes - prevTotalBytes));*/
 
                 /*Intent intentAirplaneMode = new Intent(Settings.ACTION_AIRPLANE_MODE_SETTINGS);
                 intentAirplaneMode.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -159,24 +156,24 @@ public class LogsActivity extends Activity {
 
                 //setMobileDataEnabled(getApplicationContext(), false);
 
-                /*Calendar cal = Calendar.getInstance();
-                int day = cal.get(Calendar.DAY_OF_WEEK) - 2;
+                Calendar cal = Calendar.getInstance();
+                int day = cal.get(Calendar.DAY_OF_WEEK)-1;
                 //Notify();
-*/
-/*
+
+
                 DatabaseLogger d = new DatabaseLogger(getApplicationContext());
                 //d.copyTable();
-                //d.fill(null, "2");
+                //d.clearAllLogs();
 
                 //d.getUsagePatterns(Constants.LOG_TABLE_NAME_ONE);
-                UsageProfile[] b = d.getUsagePatterns(Constants.LOG_TABLE_NAME_ONE)[2];
-
+                UsageProfile[] b = d.getUsagePatterns(Constants.LOG_TABLE_NAME_TWO)[day];
+                int i = 0;
                 for (UsageProfile c : b) {
                     if (c != null) {
-                        Log.d("[shit]", "\nTime: " + c.toString());
+                        Log.d("[shit]", "\nTime: "  + c.toString());
 
                     }
-                }*/
+                }
 
 
                 //Log.d("[shit]", "\nTime: " + b[3][8].toString());

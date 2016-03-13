@@ -80,9 +80,9 @@ public class PreferencesUtil {
 
     public void putUsageProfiles(UsageProfile[][] usageProfiles) {
         Gson gson = new Gson();
-        String usageProfilesFLat = gson.toJson(usageProfiles);
+        String usageProfilesFlat = gson.toJson(usageProfiles);
 
-        prefsEditor.putString("USAGE_PROFILES", usageProfilesFLat);
+        prefsEditor.putString("USAGE_PROFILES", usageProfilesFlat);
     }
 
     public void remove(String key) {

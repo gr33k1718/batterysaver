@@ -1,10 +1,16 @@
 package application.com.batterysaver;
 
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.app.TaskStackBuilder;
 import android.content.Context;
+import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.TrafficStats;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.util.Log;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -116,5 +122,75 @@ public class NetworkMonitor {
                 }
         }
         return bytes;
+    }
+
+    public void startNetworkMonitor(){
+        monitorThread.start();
+    }
+
+    public void stopNetworkMonitor() {
+        monitorThread.interrupt();
+    }
+
+    public boolean isAlive(){
+        return monitorThread.isAlive();
+    }
+
+    //TODO pass network traffic limit into runnable
+    //implement monitor,
+    Thread monitorThread = new Thread(new Runnable() {
+        long prevTotalBytes = pref.getLong("TOTAL_TRAFFIC", 0);
+        long currentTotalBytes = TrafficStats.getTotalRxBytes() + TrafficStats.getTotalTxBytes();
+                @Override
+                public void run() {
+                    while (!Thread.interrupted()) {
+                        try {
+                            networkNotify("","");
+                            stopNetworkMonitor();
+                        } catch (Exception e) {
+
+                        }
+                        try {
+                            Thread.sleep(600000);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                            Thread.currentThread().interrupt();
+                        }
+                    }
+                }
+            });
+            private void networkNotify(String title, String text) {
+
+                final Notification.Builder mBuilder = new Notification.Builder(context);
+                mBuilder.setStyle(new Notification.BigTextStyle(mBuilder)
+                        .bigText("The following applications could be rouge:\n" + text)
+                        .setBigContentTitle("High CPU detected")
+                        .setSummaryText("Big summary"))
+                        .setSmallIcon(R.drawable.ic_stat_name)
+                        .setContentTitle("High CPU detected")
+                        .setContentText("Summary")
+                        .setDefaults(Notification.DEFAULT_ALL)
+                        .setAutoCancel(true);
+                /*NotificationCompat.Builder mBuilder =
+                        new NotificationCompat.Builder(this)
+                                .setSmallIcon(R.drawable.ic_stat_name)
+                                .setContentTitle(title)
+                                .setContentText(text);*/
+        TaskStackBuilder stackBuilder = TaskStackBuilder.create(context);
+        Intent resultIntent = new Intent(android.provider.Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS);
+
+        stackBuilder.addParentStack(MainActivity.class);
+        stackBuilder.addNextIntent(resultIntent);
+        PendingIntent resultPendingIntent =
+                stackBuilder.getPendingIntent(
+                        0,
+                        PendingIntent.FLAG_CANCEL_CURRENT
+                );
+        mBuilder.setContentIntent(resultPendingIntent);
+        NotificationManager mNotificationManager =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        mNotificationManager.notify(0, mBuilder.build());
+
+        // ** intent for data usage settings ** resultIntent.setComponent(new ComponentName("com.android.settings", "com.android.settings.Settings$DataUsageSummaryActivity"));
     }
 }

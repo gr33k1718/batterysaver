@@ -21,6 +21,7 @@ public class UsageProfile {
     private int batteryUsed;
     private int period;
     private int charging;
+    private SavingsProfile savingsProfile;
 
     public UsageProfile(){}
 
@@ -157,12 +158,20 @@ public class UsageProfile {
         this.batteryUsed = batteryUsed;
     }
 
+    public SavingsProfile getSavingsProfile() {
+        return savingsProfile;
+    }
+
+    public void setSavingsProfile(SavingsProfile savingsProfile) {
+        this.savingsProfile = savingsProfile;
+    }
+
     public void setMinimumProfile() {
         this.brightness = 30;
         this.timeout = 15000;
         Settings.System.putInt(GlobalVars.getContentRes(),
                 Settings.System.HAPTIC_FEEDBACK_ENABLED, 0);
-        ContentResolver.setMasterSyncAutomatically(false);
+        //ContentResolver.setMasterSyncAutomatically(false);
     }
 
     @Override
@@ -182,8 +191,8 @@ public class UsageProfile {
 
     public UsageProfile merge(UsageProfile prev){
         prev.setNetworkUsage((this.getNetworkUsage() + prev.getNetworkUsage()));
-        prev.setInteractionTime((this.getInteractionTime() + prev.getInteractionTime()));
-        prev.setCpu((this.getCpu() + prev.getCpu()) / 2);
+        prev.setInteractionTime((this.getInteractionTime() + prev.getInteractionTime())/2);
+        prev.setCpu((int)(this.getCpu() + prev.getCpu()) / 2);
         prev.setBrightness((this.getBrightness() + prev.getBrightness()) / 2);
         prev.setTimeout((this.getTimeout() + prev.getTimeout()) / 2);
         prev.setStart(prev.getStart());

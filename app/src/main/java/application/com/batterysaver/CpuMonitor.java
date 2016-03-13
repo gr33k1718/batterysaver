@@ -1,10 +1,23 @@
 package application.com.batterysaver;
 
+import android.app.ActivityManager;
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.app.TaskStackBuilder;
 import android.content.Context;
+import android.content.Intent;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.util.Log;
 
+import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.RandomAccessFile;
+import java.util.ArrayList;
 
 public class CpuMonitor {
 
@@ -94,6 +107,150 @@ public class CpuMonitor {
         public static String cpu;
 
     }
+
+    public void startCpuMonitor(){
+        monitorThread.start();
+    }
+
+    public void stopCpuMonitor() {
+        monitorThread.interrupt();
+    }
+
+    public boolean isAlive(){
+        return monitorThread.isAlive();
+    }
+
+    Thread monitorThread = new Thread(new Runnable() {
+        String highUsageApps = "";
+        String[] processInfo;
+        String appName;
+        int processId;
+        int processLoad;
+
+        @Override
+        public void run() {
+            while (!Thread.interrupted()) {
+                try {
+                    for (String i : getCPU()) {
+                        processInfo = i.split(" +");
+                        processId = Integer.parseInt(processInfo[0]);
+                        processLoad = Integer.parseInt(processInfo[2]);
+                        appName = getAppNameByPID(context, processId);
+                        if (!appName.equals("") && processLoad > 3) {
+                            Log.d("[shit]", "\nTime: " + appName + " " + processInfo[2]);
+                            highUsageApps += appName + "\n";
+                        }
+                    }
+                    if (!highUsageApps.equals("")) {
+                        cpuNotify("High CPU usage detected", highUsageApps);
+                        highUsageApps = "";
+                    }
+
+                } catch (Exception e) {
+
+                }
+                try {
+                    Thread.sleep(600000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    });
+    //TODO add actions for cancel and open
+    private void cpuNotify(String title, String text) {
+
+        final Notification.Builder mBuilder = new Notification.Builder(context);
+        mBuilder.setStyle(new Notification.BigTextStyle(mBuilder)
+                .bigText("The following applications could be rouge:\n" + text)
+                .setBigContentTitle("High CPU detected")
+                .setSummaryText("Big summary"))
+                .setSmallIcon(R.drawable.ic_stat_name)
+                .setContentTitle("High CPU detected")
+                .setContentText("Summary")
+                .setDefaults(Notification.DEFAULT_ALL)
+                .setAutoCancel(true);
+        /*NotificationCompat.Builder mBuilder =
+                new NotificationCompat.Builder(this)
+                        .setSmallIcon(R.drawable.ic_stat_name)
+                        .setContentTitle(title)
+                        .setContentText(text);*/
+        TaskStackBuilder stackBuilder = TaskStackBuilder.create(context);
+        Intent resultIntent = new Intent(android.provider.Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS);
+
+        stackBuilder.addParentStack(MainActivity.class);
+        stackBuilder.addNextIntent(resultIntent);
+        PendingIntent resultPendingIntent =
+                stackBuilder.getPendingIntent(
+                        0,
+                        PendingIntent.FLAG_CANCEL_CURRENT
+                );
+        mBuilder.setContentIntent(resultPendingIntent);
+        NotificationManager mNotificationManager =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        mNotificationManager.notify(0, mBuilder.build());
+
+        // ** intent for data usage settings ** resultIntent.setComponent(new ComponentName("com.android.settings", "com.android.settings.Settings$DataUsageSummaryActivity"));
+    }
+
+    public ArrayList<String> getCPU() {
+        ArrayList<String> list = new ArrayList<String>();
+        try {
+            Process p = Runtime.getRuntime().exec("top -m 5 -d 420 -n 1");
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(
+                    p.getInputStream()));
+
+            String line;
+            String finalString;
+            String resultString;
+            while ((line = reader.readLine()) != null) {
+                finalString = line.trim();
+                if (!line.isEmpty() && Character.isDigit(finalString.charAt(0))) {
+                    resultString = finalString.replace("%", "");
+                    Log.e("Output ", resultString);
+                    list.add(resultString);
+                }
+            }
+
+            p.waitFor();
+
+        } catch (Exception e) {
+        }
+        return list;
+    }
+
+    public String getAppNameByPID(Context context, int pid) {
+        PackageManager pm = context.getPackageManager();
+        ActivityManager manager
+                = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+
+        for (ActivityManager.RunningAppProcessInfo processInfo : manager.getRunningAppProcesses()) {
+            if (processInfo.pid == pid) {
+                try {
+                    PackageInfo pkgInfo = pm.getPackageInfo(processInfo.pkgList[0],
+                            PackageManager.GET_ACTIVITIES);
+
+                    if (!isSystemPackage(pkgInfo)) {
+                        String appName = (String) pm.getApplicationLabel
+                                (pm.getApplicationInfo(processInfo.processName, PackageManager.GET_META_DATA));
+                        return appName;
+                    }
+                } catch (PackageManager.NameNotFoundException e) {
+                }
+
+            }
+        }
+        return "";
+    }
+
+    private boolean isSystemPackage(PackageInfo pkgInfo) {
+        return (pkgInfo.applicationInfo.flags &
+                ApplicationInfo.FLAG_SYSTEM) != 0;
+    }
+
+
+
 
 
 }

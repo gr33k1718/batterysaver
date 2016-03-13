@@ -56,30 +56,25 @@ public class ScreenOnService extends Service {
 
         @Override
         public void run() {
+            int a = 10000;
             while (!Thread.interrupted()) {
+                a -= 1000;
                 try {
-                    for (String i : getCPU()) {
-                        processInfo = i.split(" +");
-                        processId = Integer.parseInt(processInfo[0]);
-                        processLoad = Integer.parseInt(processInfo[2]);
-                        appName = getAppNameByPID(getApplicationContext(), processId);
-                        if (!appName.equals("") && processLoad > 7) {
-                            Log.d("[shit]", "\nTime: " + appName + " " + processInfo[2]);
-                            highUsageApps += appName + "\n";
-                        }
-                    }
-                    if (!highUsageApps.equals("")) {
+                    Log.d("[hi]", "\n\nPrev " + a);
+                    if(a < 0){
                         Notify("High CPU usage detected", highUsageApps);
-                        highUsageApps = "";
+                        stopRepeatingTask();
                     }
+
 
                 } catch (Exception e) {
-
+                    Log.d("[hi]", "\n\nPrev " + e.toString());
                 }
                 try {
-                    Thread.sleep(900000);
+                    Thread.sleep(5000);
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    Log.d("[hi]", "\n\nPrev " + e.toString());
+                    Thread.currentThread().interrupt();
                 }
             }
         }
@@ -152,7 +147,7 @@ public class ScreenOnService extends Service {
     public ArrayList<String> getCPU() {
         ArrayList<String> list = new ArrayList<String>();
         try {
-            Process p = Runtime.getRuntime().exec("top -m 5 -d 600 -n 1");
+            Process p = Runtime.getRuntime().exec("top -m 5 -d 250 -n 1");
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(
                     p.getInputStream()));

@@ -96,17 +96,18 @@ public class DatabaseLogger {
 
     public UsageProfile[][] getUsagePatterns(String name) {
         UsageProfile prevUsage = null;
-        UsageProfile currentUsage = null;
+        UsageProfile currentUsage;
+
         int singlePeriod = 0;
         int multiPeriod = 0;
         int totalBatteryUsed = 0;
 
         boolean first = true;
-
+        //TODO sort times, max cpu
         final long MAX_IDLE = 120000;
         final long MIN_HIGH_INTERACTION = 1800000;
         final long MIN_HIGH_NETWORK = 1000000;
-        final float MIN_HIGH_CPU = 35;
+        final float MIN_HIGH_CPU = 34;
 
         UsageProfile[][] group = new UsageProfile[7][24];
 
@@ -116,7 +117,7 @@ public class DatabaseLogger {
 
         if (cursor.moveToFirst()) {
             do {
-                    int day = cursor.getInt(1) - 1;
+                    int day = cursor.getInt(1);
                     int period = cursor.getInt(2);
                     int battery = cursor.getInt(3);
                     int charging = cursor.getInt(4);
@@ -167,8 +168,10 @@ public class DatabaseLogger {
                                 prevUsage.setBatteryUsed(singlePeriod > 0 ? singlePeriod : 0);
                             }
 
-                            Log.d("[hi]", "\n\nPrev " + prevUsage + " " + totalBatteryUsed);
-                            group[prevUsage.getDay()][prevUsage.getStart()] = prevUsage;
+
+
+                            Log.d("[hi]", "\n\nPrev " + prevUsage + " " + prevUsage.getDay()+" " + totalBatteryUsed);
+                            group[prevUsage.getDay()-1][prevUsage.getStart()] = prevUsage;
                             prevUsage = currentUsage;
                             first = true;
                         }
@@ -189,7 +192,8 @@ public class DatabaseLogger {
         return group;
     }
 
-
+    //TODO get charging times and implement a setting wich allows user to take them into account
+    //TODO determine battery used per stat
     public void fill(SystemContext info, String day) {
         ArrayList<String> shit = new ArrayList<String>();
 
@@ -235,6 +239,7 @@ public class DatabaseLogger {
         } catch (Exception e) {}
     }
 
+    //TODO fix this
     private long getWeightedAverage(long prev, long current){
         double weightPrev = 0.75;
         double weightCurrent = 1.25;

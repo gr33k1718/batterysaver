@@ -1,14 +1,27 @@
 package application.com.batterysaver;
 
+import android.app.ActivityManager;
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
+import android.app.TaskStackBuilder;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.os.BatteryManager;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
+import android.provider.Settings;
+import android.util.Log;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.Calendar;
 
 public class LogService extends Service {
@@ -16,11 +29,14 @@ public class LogService extends Service {
     private PowerManager powerManager;
     private WakeLock wakeLock;
     private DatabaseLogger database;
-
+    private Calendar cal = Calendar.getInstance();
+    private int day;
+    private int period;
     @Override
     public void onCreate() {
         super.onCreate();
-
+        day = cal.get(Calendar.DAY_OF_WEEK)-1;
+        period = cal.get(Calendar.HOUR_OF_DAY);
         database = new DatabaseLogger(this);
 
         powerManager = (PowerManager) getBaseContext().getSystemService(Context.POWER_SERVICE);
@@ -31,6 +47,9 @@ public class LogService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+
+        applySettings();
+
         logContext();
 
         stopSelf();
@@ -49,6 +68,8 @@ public class LogService extends Service {
     public IBinder onBind(Intent intent) {
         return null;
     }
+
+
 
     public void logContext() {
         int isCharging, period, day, brightness, timeOut, status, batteryLevel;
@@ -97,6 +118,55 @@ public class LogService extends Service {
     private void restartTimer() {
         stopService(new Intent(this, ScreenOnService.class));
         startService(new Intent(this, ScreenOnService.class));
+    }
+
+    private void applySettings(){
+        int endTime;
+        SavingsProfile s = null;
+        CpuMonitor cpuMonitor = new CpuMonitor();
+        UsageProfile[] u = database.getUsagePatterns(Constants.LOG_TABLE_NAME_TWO)[day];
+
+        for(UsageProfile usageProfile : u){
+            if(usageProfile != null){
+                if(usageProfile.getEnd() == 0){
+                    endTime = 24;
+                }
+                else{
+                    endTime = usageProfile.getEnd();
+                }
+
+                if(period >= usageProfile.getStart() && period <= endTime){
+                    s = new SavingsProfile(usageProfile).generate();
+                }
+            }
+        }
+
+        Log.d("[Savings]", "Savings Profile: " + s);
+        Settings.System.putInt(this.getContentResolver(),
+                Settings.System.SCREEN_BRIGHTNESS, s.getBrightness());
+        Settings.System.putLong(this.getContentResolver(),
+                Settings.System.SCREEN_OFF_TIMEOUT, s.getTimeout());
+
+        if(s.isSetCpuMonitor()){
+            if(!cpuMonitor.isAlive()){
+                cpuMonitor.startCpuMonitor();
+            }
+        }
+        else{
+            cpuMonitor.stopCpuMonitor();
+        }
+
+        if(s.isSetCpuMonitor()){
+            if(!cpuMonitor.isAlive()){
+                cpuMonitor.startCpuMonitor();
+            }
+        }
+        else{
+            cpuMonitor.stopCpuMonitor();
+        }
+
+
+
     }
 
 }
