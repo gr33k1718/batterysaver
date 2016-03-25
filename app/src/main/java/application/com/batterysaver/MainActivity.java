@@ -1,53 +1,91 @@
 package application.com.batterysaver;
 
 import android.app.Activity;
-import android.app.AlarmManager;
-import android.app.PendingIntent;
-import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
 import android.widget.AdapterView;
 import android.widget.GridView;
-import android.widget.Toast;
+import android.widget.LinearLayout;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import com.github.mikephil.charting.charts.PieChart;
+import com.github.mikephil.charting.data.Entry;
+
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
 
 public class MainActivity extends Activity {
     public static int width;
     public static int height;
     private GridView gridview;
+    private LinearLayout mainLayout;
+    private PieChart mChart;
+    private UsageProfile usageProfile;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         this.requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.activity_main);
-        gridview = (GridView) findViewById(R.id.gridview);
 
-        setupAdapter();
 
-        getWindowSize();
+        //ListView lv = (ListView) findViewById(R.id.listView1);
+/*
+        double[][] powerPerDay = new UsageProfile().getPowerUsagePerDay();
 
-        viewLogs();
 
-        //PendingIntent.getService(this, 1, new Intent(this, LogService.class), PendingIntent.FLAG_CANCEL_CURRENT).cancel();
-        Toast.makeText(this, "" + isActive(), Toast.LENGTH_SHORT).show();
+        usageProfile = new UsageProfile();
+        usageProfile.generateStats();
 
-        //TODO implement charts and style the UI !Important!!!!
-        //if(!isActive()){
-        scheduleAlarm();
-        //}
 
+        PieChart pieChart = (PieChart) findViewById(R.id.chart);
+        pieChart.setTouchEnabled(false);
+        // creating data values
+
+        PieDataSet dataset = new PieDataSet(entries(usageProfile.getPowerUsageWeek()), "");
+
+        dataset.setValueTextSize(10f);
+
+        PieData data = new PieData(getLabels(), dataset); // initialize Piedata
+        pieChart.setData(data);
+        pieChart.setDescriptionTextSize(10f);
+        pieChart.setDescription("Battery used per state");
+
+        Legend l = pieChart.getLegend();
+        l.setEnabled(false);
+
+
+        dataset.setColors(ColorTemplate.COLORFUL_COLORS);
+
+        PieChart pieChart2 = (PieChart) findViewById(R.id.chart2);
+        pieChart2.setTouchEnabled(false);
+        // creating data values
+
+        PieDataSet dataset2 = new PieDataSet(entries(usageProfile.getTimeUsageWeek()), "");
+
+        dataset2.setValueTextSize(10f);
+
+        PieData data2 = new PieData(getLabels(), dataset2); // initialize Piedata
+        pieChart2.setData(data2);
+        pieChart2.setDescriptionTextSize(10f);
+        pieChart2.setDescription("Time in each state");
+
+
+
+        dataset2.setColors(ColorTemplate.COLORFUL_COLORS);*/
+    }
+
+    private ArrayList<Entry> entries(double[] usage) {
+        ArrayList<Entry> entries = new ArrayList<>();
+        entries.add(new Entry((float) usage[0], 0));
+        entries.add(new Entry((float) usage[1], 1));
+        entries.add(new Entry((float) usage[2], 2));
+        entries.add(new Entry((float) usage[3], 3));
+        entries.add(new Entry((float) usage[4], 4));
+
+        return entries;
     }
 
 
@@ -81,36 +119,17 @@ public class MainActivity extends Activity {
         });
     }
 
-    public void scheduleAlarm() {
-        Toast.makeText(this, "Active", Toast.LENGTH_SHORT).show();
 
-        Calendar time = Calendar.getInstance();
+    private ArrayList<String> getLabels() {
 
-        time.set(Calendar.HOUR_OF_DAY, time.get(Calendar.HOUR_OF_DAY) + 1);
-        time.set(Calendar.MINUTE, 0);
+        ArrayList<String> labels = new ArrayList<String>();
+        labels.add("Idle");
+        labels.add("Casual");
+        labels.add("High Interaction");
+        labels.add("High Network");
+        labels.add("High Cpu");
 
-        PendingIntent p = PendingIntent.getService(this, 1, new Intent(this, LogService.class), PendingIntent.FLAG_CANCEL_CURRENT);
 
-        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-
-        alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), AlarmManager.INTERVAL_HOUR, p);
-    }
-
-    private void getWindowSize() {
-        DisplayMetrics metrics = new DisplayMetrics();
-        getWindowManager().getDefaultDisplay().getMetrics(metrics);
-
-        width = metrics.widthPixels;
-        height = metrics.heightPixels;
-    }
-
-    private void setupAdapter() {
-        ArrayList<String> days = new ArrayList<>(Arrays.asList(new String[]{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}));
-        Adapter gridAdapter = new Adapter(this, R.layout.grid_item, days, true);
-        gridview.setAdapter(gridAdapter);
-    }
-
-    public boolean isActive() {
-        return (PendingIntent.getService(this, 1, new Intent(this, LogService.class), PendingIntent.FLAG_NO_CREATE) != null);
+        return labels;
     }
 }

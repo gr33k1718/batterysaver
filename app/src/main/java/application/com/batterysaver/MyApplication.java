@@ -4,12 +4,12 @@ import android.app.Application;
 import android.content.ContentResolver;
 import android.content.Context;
 
-public class GlobalVars extends Application {
+public class MyApplication extends Application {
 
     private static Context context;
 
     public static Context getAppContext() {
-        return GlobalVars.context;
+        return MyApplication.context;
     }
 
     public static ContentResolver getContentRes() {
@@ -18,7 +18,7 @@ public class GlobalVars extends Application {
 
     public void onCreate() {
         super.onCreate();
-        GlobalVars.context = getApplicationContext();
+        MyApplication.context = getApplicationContext();
     }
 
 }

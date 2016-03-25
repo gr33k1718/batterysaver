@@ -20,8 +20,26 @@ import java.io.IOException;
 public class NetworkMonitor {
     private static final String RX_FILE = "/sys/class/net/wlan0/statistics/rx_bytes";
     private static final String TX_FILE = "/sys/class/net/wlan0/statistics/tx_bytes";
-    private static Context context = GlobalVars.getAppContext();
+    private static Context context = MyApplication.getAppContext();
     private static PreferencesUtil pref = PreferencesUtil.getInstance(context, Constants.NETWORK_PREFS, Context.MODE_PRIVATE);
+    private Thread networkMonitor = new Thread(new NetworkRunnable());
+    private long networkLimit;
+
+    public NetworkMonitor(long networkLimit) {
+        this.networkLimit = networkLimit;
+    }
+
+    public void startNetworkMonitor() {
+        networkMonitor.start();
+    }
+
+    public void stopNetworkMonitor() {
+        networkMonitor.interrupt();
+    }
+
+    public boolean isAlive() {
+        return networkMonitor.isAlive();
+    }
 
     public static long[] getTrafficStats() {
 
@@ -75,11 +93,6 @@ public class NetworkMonitor {
         }
         pref.commit();
 
-        /*Log.d("[shit]", "Previous mobile " + prevMobileStats + "\nPrevious network " + prevNetworkStats +
-                "\nCurrent mobile " + currentMobileStats + "\nCurrent network " + currentNetworkStats + "\nTotal network " + stats[1] +
-                "\nTotal mobile " + stats[0] + "\nTotal bytes " + totalBytes + "\nMobile " + (totalBytes - mobileTraffic)
-                + "\nWifi " + (totalBytes - wifiTraffic));
-*/
         return stats;
     }
 
@@ -91,7 +104,7 @@ public class NetworkMonitor {
 
     public static int wifiSpeed() {
         Integer linkSpeed = 0;
-        WifiManager wifiManager = (WifiManager) GlobalVars.getAppContext().getSystemService(Context.WIFI_SERVICE);
+        WifiManager wifiManager = (WifiManager) MyApplication.getAppContext().getSystemService(Context.WIFI_SERVICE);
         WifiInfo wifiInfo = wifiManager.getConnectionInfo();
         if (wifiInfo != null) {
             linkSpeed = wifiInfo.getLinkSpeed();
@@ -100,7 +113,7 @@ public class NetworkMonitor {
         return linkSpeed;
     }
 
-    public static long readFile(String fileName) {
+    private static long readFile(String fileName) {
         File file = new File(fileName);
         BufferedReader br = null;
         long bytes = 0;
@@ -124,58 +137,19 @@ public class NetworkMonitor {
         return bytes;
     }
 
-    public void startNetworkMonitor(){
-        monitorThread.start();
-    }
+    private void networkNotify(String title, String text) {
 
-    public void stopNetworkMonitor() {
-        monitorThread.interrupt();
-    }
+        final Notification.Builder mBuilder = new Notification.Builder(context);
+        mBuilder.setStyle(new Notification.BigTextStyle(mBuilder)
+                .bigText("High network traffic detected. Please review your current usage to conserve battery")
+                .setBigContentTitle("Network traffic limit reached")
+                .setSummaryText("Big summary"))
+                .setSmallIcon(R.drawable.ic_stat_name)
+                .setContentTitle("High CPU detected")
+                .setContentText("Please limit network use")
+                .setDefaults(Notification.DEFAULT_ALL)
+                .setAutoCancel(true);
 
-    public boolean isAlive(){
-        return monitorThread.isAlive();
-    }
-
-    //TODO pass network traffic limit into runnable
-    //implement monitor,
-    Thread monitorThread = new Thread(new Runnable() {
-        long prevTotalBytes = pref.getLong("TOTAL_TRAFFIC", 0);
-        long currentTotalBytes = TrafficStats.getTotalRxBytes() + TrafficStats.getTotalTxBytes();
-                @Override
-                public void run() {
-                    while (!Thread.interrupted()) {
-                        try {
-                            networkNotify("","");
-                            stopNetworkMonitor();
-                        } catch (Exception e) {
-
-                        }
-                        try {
-                            Thread.sleep(600000);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                            Thread.currentThread().interrupt();
-                        }
-                    }
-                }
-            });
-            private void networkNotify(String title, String text) {
-
-                final Notification.Builder mBuilder = new Notification.Builder(context);
-                mBuilder.setStyle(new Notification.BigTextStyle(mBuilder)
-                        .bigText("The following applications could be rouge:\n" + text)
-                        .setBigContentTitle("High CPU detected")
-                        .setSummaryText("Big summary"))
-                        .setSmallIcon(R.drawable.ic_stat_name)
-                        .setContentTitle("High CPU detected")
-                        .setContentText("Summary")
-                        .setDefaults(Notification.DEFAULT_ALL)
-                        .setAutoCancel(true);
-                /*NotificationCompat.Builder mBuilder =
-                        new NotificationCompat.Builder(this)
-                                .setSmallIcon(R.drawable.ic_stat_name)
-                                .setContentTitle(title)
-                                .setContentText(text);*/
         TaskStackBuilder stackBuilder = TaskStackBuilder.create(context);
         Intent resultIntent = new Intent(android.provider.Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS);
 
@@ -190,7 +164,36 @@ public class NetworkMonitor {
         NotificationManager mNotificationManager =
                 (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         mNotificationManager.notify(0, mBuilder.build());
+    }
 
-        // ** intent for data usage settings ** resultIntent.setComponent(new ComponentName("com.android.settings", "com.android.settings.Settings$DataUsageSummaryActivity"));
+    private class NetworkRunnable implements Runnable {
+        private final long SLEEP_TIME = 5000;
+        private long currentTraffic;
+        private long currentTotalBytes;
+
+        @Override
+        public void run() {
+            long prevTotalBytes = pref.getLong("TOTAL_TRAFFIC", 0);
+
+            while (!Thread.interrupted()) {
+                currentTotalBytes = TrafficStats.getTotalRxBytes() + TrafficStats.getTotalTxBytes();
+                currentTraffic = (currentTotalBytes - prevTotalBytes);
+
+                try {
+                    if (currentTraffic > networkLimit) {
+                        networkNotify("", "");
+                        stopNetworkMonitor();
+                    }
+                } catch (Exception e) {
+                    Log.e("[Error]", e.toString());
+                }
+                try {
+                    Thread.sleep(SLEEP_TIME);
+                } catch (InterruptedException e) {
+                    Log.e("[Error]", e.toString());
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }
     }
 }

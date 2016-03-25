@@ -12,12 +12,11 @@ import com.google.gson.Gson;
 public class PreferencesUtil {
 
     private static PreferencesUtil sInstance;
-    SharedPreferences prefs;
-    SharedPreferences.Editor prefsEditor;
+    private SharedPreferences prefs;
+    private SharedPreferences.Editor prefsEditor;
     private Context mAppContext;
     private boolean mUseApply;
 
-    //Set to private
     private PreferencesUtil(Context context, String pref, int type) {
         mAppContext = context.getApplicationContext();
         prefs = mAppContext.getSharedPreferences(pref, type);
@@ -91,10 +90,9 @@ public class PreferencesUtil {
 
     public void commit() {
         if (mUseApply)
-            //Since API Level 9, apply() is provided for asynchronous operations
             prefsEditor.apply();
+
         else
-            //Fallback to syncrhonous if not available
             prefsEditor.commit();
     }
 }
