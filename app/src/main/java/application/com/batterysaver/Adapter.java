@@ -33,8 +33,8 @@ public class Adapter<T> extends ArrayAdapter<T> {
             v = vi.inflate(resource, null);
 
             if (isGridView) {
-                v.setMinimumWidth(MainActivity.width / 2);
-                v.setMinimumHeight(MainActivity.height / 6);
+                v.setMinimumWidth(WeeklyStatsActivity.width / 2);
+                v.setMinimumHeight(WeeklyStatsActivity.height / 6);
             }
 
         }

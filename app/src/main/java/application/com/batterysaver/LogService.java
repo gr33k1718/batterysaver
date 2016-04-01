@@ -1,47 +1,70 @@
 package application.com.batterysaver;
 
-import android.app.IntentService;
+import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.BatteryManager;
+import android.os.IBinder;
+import android.os.PowerManager;
 import android.provider.Settings;
-import android.support.v4.content.WakefulBroadcastReceiver;
-import android.util.Log;
 
 import java.util.Calendar;
 
-public class LogService extends IntentService {
+public class LogService extends Service {
     private DatabaseLogger database;
     private Calendar cal = Calendar.getInstance();
     private CpuMonitor cpuMonitor = new CpuMonitor();
     private int day;
     private int period;
-    private BootReceiver bootReceiver = new BootReceiver();
     private PreferencesUtil prefs = PreferencesUtil.getInstance(this,
             Constants.SYSTEM_CONTEXT_PREFS, Context.MODE_PRIVATE);
+    private PowerManager pm;
+    private PowerManager.WakeLock mWakeLock;
 
-    public LogService(){
-        super("LogService");
-    }
 
     @Override
-    protected void onHandleIntent(Intent intent) {
+    public void onCreate() {
+        super.onCreate();
+
+        //Ensures the CPU is kept awake while the screen is off
+        pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "lock");
+        mWakeLock.acquire();
+
         day = cal.get(Calendar.DAY_OF_WEEK) - 1;
         period = cal.get(Calendar.HOUR_OF_DAY);
         database = new DatabaseLogger(this);
 
-       // bootReceiver.startReceiver();
-
-        //cpuMonitor.startCpuThread();
-
         logContext();
 
-        WakefulBroadcastReceiver.completeWakefulIntent(intent);
-
+        stopSelf();
     }
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
 
+        mWakeLock.release();
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
+
+    /*
+     *  Restarts the service that calculates interactions time and cpu load.
+     *  This is necessary as Android can force-stop background applications and services
+     */
+    private void restartService() {
+        stopService(new Intent(this, LongRunningService.class));
+        startService(new Intent(this, LongRunningService.class));
+    }
+
+    /*
+     *  Gathers the context information related to the user and stores within the database.
+     */
     public void logContext() {
         DisplayMonitor displayMonitor = new DisplayMonitor();
         int isCharging, period, day, brightness, timeOut, status, batteryLevel;
@@ -64,31 +87,31 @@ public class LogService extends IntentService {
         timeOut = displayMonitor.screenTimeout();
         isCharging = (status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL) ? 1 : 0;
         interactionTime = displayMonitor.getInteractionTime();
-        batteryLevel = Predictor.predictBatteryUsage(trafficStats[0], trafficStats[1], cpuLoad, interactionTime, brightness);
-/*
-        Log.e("[Error]", "Interaction time " + interactionTime +
-                "\nPredicted battery " + Predictor.predictInteractionBattery(interactionTime, brightness) +
-                "\nTraffic " + trafficStats[0] + " " + trafficStats[1] +
-                "\nPredicted battery " + Predictor.predictNetworkBattery(trafficStats[0],trafficStats[1]) +
-                "\nCPU " + cpuLoad +
-                "\nPredicted battery " + Predictor.predictCpuBattery(cpuLoad) +
-                "\nPredicted overall battery " + batteryLevel );
-*/
+        batteryLevel = Predictor.milliAmpPerHpur(trafficStats[0], trafficStats[1], cpuLoad, interactionTime, brightness);
+
         systemContext = new SystemContext(day, period, isCharging, brightness, batteryLevel,
                 timeOut, trafficStats[0], trafficStats[1], interactionTime, cpuLoad);
 
         database.logStatus(systemContext);
-        //database.clearAllLogs();
+
+        restartService();
+        //database.copyTable();
+
 
     }
 
+    /*
+     *  Determines the usage profile for the given time of the day. Calculates the the settings
+     *  to apply and activates the settings suggested.
+     *  Setting are applied based on whether the current time
+     */
     private void applySettings() {
         int endTime;
-        SavingsProfile s = null;
+        SavingsProfile savingsProfile = null;
 
-        UsageProfile[] u = prefs.getUsageProfiles()[day];
+        UsageProfile[] usageProfiles = prefs.getUsageProfiles()[day];
 
-        for (UsageProfile usageProfile : u) {
+        for (UsageProfile usageProfile : usageProfiles) {
             if (usageProfile != null) {
                 if (usageProfile.getEnd() == 0) {
                     endTime = 24;
@@ -97,20 +120,20 @@ public class LogService extends IntentService {
                 }
 
                 if (period >= usageProfile.getStart() && period <= endTime) {
-                    s = new SavingsProfile(usageProfile).generate();
+                    savingsProfile = new SavingsProfile(usageProfile).generate();
                     break;
                 }
             }
         }
 
-        NetworkMonitor networkMonitor = new NetworkMonitor(s.getNetworkWarningLimit());
+        NetworkMonitor networkMonitor = new NetworkMonitor(savingsProfile.getNetworkWarningLimit());
 
         Settings.System.putInt(this.getContentResolver(),
-                Settings.System.SCREEN_BRIGHTNESS, s.getBrightness());
+                Settings.System.SCREEN_BRIGHTNESS, savingsProfile.getBrightness());
         Settings.System.putLong(this.getContentResolver(),
-                Settings.System.SCREEN_OFF_TIMEOUT, s.getTimeout());
+                Settings.System.SCREEN_OFF_TIMEOUT, savingsProfile.getTimeout());
 
-        if (s.isSetCpuMonitor()) {
+        if (savingsProfile.isSetCpuMonitor()) {
             if (!cpuMonitor.isAliveCpuMonitor()) {
                 cpuMonitor.startCpuMonitor();
             }
@@ -118,7 +141,7 @@ public class LogService extends IntentService {
             cpuMonitor.stopCpuMonitor();
         }
 
-        if (s.isSetNetworkMonitor()) {
+        if (savingsProfile.isSetNetworkMonitor()) {
             if (!networkMonitor.isAlive()) {
                 networkMonitor.startNetworkMonitor();
             }

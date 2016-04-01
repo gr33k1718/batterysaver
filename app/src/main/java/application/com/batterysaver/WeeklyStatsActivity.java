@@ -16,7 +16,7 @@ import com.github.mikephil.charting.data.Entry;
 
 import java.util.ArrayList;
 
-public class MainActivity extends Activity {
+public class WeeklyStatsActivity extends Activity {
     public static int width;
     public static int height;
     private GridView gridview;
@@ -111,9 +111,9 @@ public class MainActivity extends Activity {
 
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, final long id) {
-                Intent myIntent = new Intent(MainActivity.this, LogsActivity.class);
+                Intent myIntent = new Intent(WeeklyStatsActivity.this, LogsActivity.class);
                 myIntent.putExtra("key", position + 1);
-                MainActivity.this.startActivity(myIntent);
+                WeeklyStatsActivity.this.startActivity(myIntent);
 
             }
         });

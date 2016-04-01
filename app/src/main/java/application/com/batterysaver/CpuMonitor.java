@@ -13,11 +13,10 @@ import android.content.pm.PackageManager;
 import android.util.Log;
 
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.RandomAccessFile;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class CpuMonitor {
 
@@ -25,177 +24,151 @@ public class CpuMonitor {
     private static PreferencesUtil pref = PreferencesUtil.getInstance(context, Constants.SYSTEM_CONTEXT_PREFS, Context.MODE_PRIVATE);
     private Thread cpuMonitor = new Thread(new CpuRunnable());
 
-    Thread cpuThread = new Thread(new Runnable() {
-        @Override
-        public void run() {
-            int cpuLoad = 0;
-            int result = 0;
-
-            for(int i = 0; i < 10; i++){
-
-                try {
-                    cpuLoad = CpuMonitor.newReadCpuUsage(120);
-                } catch (NumberFormatException e) {
-                    Log.e("[Error]", "" + e.toString());
-                }
-
-                Log.e("[Error]", "" + cpuLoad);
-
-                result += cpuLoad;
-
-                try {
-                    Thread.sleep(180000);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-
-            }
-            Log.e("[Error]", "Average cpu " + (int) (result / 10.0));
-            pref.putInt(Constants.CPU_LOAD_PREF_INT, (int) (result / 10.0));
-
-            pref.commit();
-
-
-        }
-    });
-
-    public void startCpuThread(){
-        if(cpuThread.isAlive()){
-            cpuThread.interrupt();
-            cpuThread.start();
-        }
-        else{
-            cpuThread.start();
-        }
-    }
-
-    private boolean isAliveCpuThread(){
-        return cpuThread.isAlive();
-    }
-
-    public void startCpuMonitor() {
-        cpuMonitor.start();
-    }
-
-    public void stopCpuMonitor() {
-        cpuMonitor.interrupt();
-    }
-
-    public boolean isAliveCpuMonitor() {
-        return cpuMonitor.isAlive();
-    }
-
-    public static void clear() {
-
-        pref.remove(Constants.CPU_LOAD_PREF);
-        pref.commit();
-    }
-
-    public static int getTotalCpuLoad() {
-
-        String prevCpuStats = pref.getString(Constants.CPU_LOAD_PREF, "cpu  0 0 0 0 0 0 0 0 0 0");
-        String currentCpuStats = readCpuUsage();
-
-        float result = findDifference(prevCpuStats, currentCpuStats);
-
-        pref.putString(Constants.CPU_LOAD_PREF, currentCpuStats);
-        pref.commit();
-
-        return pref.getInt(Constants.CPU_LOAD_PREF_INT, 0);
-    }
-
-    private static float findDifference(String start, String end) {
-        String[] prev = start.split(" +");
-        String[] current = end.split(" +");
-
-        long idle1 = Long.parseLong(prev[4]);
-        long cpu1 = Long.parseLong(prev[1]) + Long.parseLong(prev[2]) + Long.parseLong(prev[3]) + Long.parseLong(prev[5])
-                + Long.parseLong(prev[6]) + Long.parseLong(prev[7]) + Long.parseLong(prev[8]);
-
-        long idle2 = Long.parseLong(current[4]);
-        long cpu2 = Long.parseLong(current[1]) + Long.parseLong(current[2]) + Long.parseLong(current[3]) + Long.parseLong(current[5])
-                + Long.parseLong(current[6]) + Long.parseLong(current[7]) + Long.parseLong(current[8]);
-
-        long prevTotal = idle1 + cpu1;
-        long total = idle2 + cpu2;
-
-        long totald = total - prevTotal;
-        long idled = idle2 - idle1;
-
-        float result = (float) (totald - idled) / totald;
-
-        return result > 0 ? result : (float) idle2 / total;
-    }
-
-    private static int spilt(String cpuLoad){
+    /**
+     * Parses the string representation of CPU load and calculates total load.
+     *
+     * @param cpuLoad string CPU representation
+     * @return total CPU load
+     */
+    private static int parseCpuLoad(String cpuLoad) {
         String[] cpuTotal = cpuLoad.split(" +");
 
-        return Integer.parseInt(cpuTotal[1]) + Integer.parseInt(cpuTotal[2]) + Integer.parseInt(cpuTotal[3]) + Integer.parseInt(cpuTotal[4]);
-
-
+        return Integer.parseInt(cpuTotal[1]) + Integer.parseInt(cpuTotal[2])
+                + Integer.parseInt(cpuTotal[3]) + Integer.parseInt(cpuTotal[4]);
     }
 
-    public static String readCpuUsage() {
-        String usage = "";
-
-        try {
-            RandomAccessFile reader = new RandomAccessFile("/proc/stat", "r");
-
-            for (int y = 0; y < 2; y++) {
-                usage = reader.readLine();
-            }
-            reader.close();
-
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return usage;
-    }
-
-    public static int newReadCpuUsage(int delay) {
+    /**
+     * Determines the total CPU but parsing the output of the Linux TOP command
+     *
+     * @param delay the delay passed to the TOP command
+     * @return the total CPU load over the period
+     */
+    public static int readCpuUsage(int delay) {
         String line = "";
         String resultString = "";
         int result = 0;
-        String[] usage = null;
+
         try {
             Process p = Runtime.getRuntime().exec("top -m 1 -d " + delay + " -n 1");
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(
                     p.getInputStream()));
 
-            for(int i = 0; i < 4; i++){
+            for (int i = 0; i < 4; i++) {
                 line = reader.readLine();
             }
 
             resultString = line.replaceAll("[%a-zA-Z,]", "");
             resultString.trim();
+            result = parseCpuLoad(resultString);
 
+            Log.e("[Error]", "New read CPU usage " + resultString + " " + result);
             p.waitFor();
 
         } catch (Exception e) {
         }
-        return spilt(resultString);
+        return result;
     }
 
+    /**
+     * Retrieves the total CPU load from shared preferences.
+     *
+     * @return total CPU load
+     */
+    public static int getTotalCpuLoad() {
+
+        return pref.getInt(Constants.CPU_LOAD_PREF_INT, 0);
+    }
+
+    /**
+     * Responsible for monitoring the CPU load of the processor. Stays alive for 50 min recording
+     * CPU load for 30 seconds every 5 min. The average is taken and stored within shared
+     * preferences.
+     */
+    public void monitorCpuLoad() {
+        Log.e("[Error]", "Cpu thread");
+        ExecutorService threadPoolExecutor = Executors.newSingleThreadExecutor();
+
+        Runnable cpuLoadRunnable = new Runnable() {
+            @Override
+            public void run() {
+                int cpuLoad = 0;
+                int result = 0;
+
+                for (int i = 0; i < 10; i++) {
+
+                    try {
+                        cpuLoad = readCpuUsage(30);
+                    } catch (NumberFormatException e) {
+                        Log.e("[Error]", "" + e.toString());
+                    }
+
+                    Log.e("[Error]", "" + cpuLoad);
+
+                    result += cpuLoad;
+
+                    try {
+                        Thread.sleep(270000);
+                    } catch (InterruptedException e) {
+                    }
+
+                }
+                Log.e("[Error]", "Average cpu " + (int) (result / 10.0));
+                pref.putInt(Constants.CPU_LOAD_PREF_INT, (int) (result / 10.0));
+
+                pref.commit();
+            }
+        };
+
+        threadPoolExecutor.submit(cpuLoadRunnable);
+    }
+
+    /**
+     * Starts the CPU monitor thread
+     */
+    public void startCpuMonitor() {
+        cpuMonitor.start();
+    }
+
+    /**
+     * Causes the CPU monitor thread to be interrupted allowing the garbage collector to
+     * remove it from memory.
+     */
+    public void stopCpuMonitor() {
+        cpuMonitor.interrupt();
+    }
+
+    /**
+     * Determines if the CPU monitor thread is active.
+     *
+     * @return whether the thread is active
+     */
+    public boolean isAliveCpuMonitor() {
+        return cpuMonitor.isAlive();
+    }
+
+    /**
+     * Determines the CPU load of the top five processes over a 7 minute period.
+     *
+     * @return the list of processes
+     */
     private ArrayList<String> getCpuLoadPerProcess() {
+        String line;
+        String trimmedString;
+        String resultString;
         ArrayList<String> list = new ArrayList<>();
+
         try {
             Process p = Runtime.getRuntime().exec("top -m 5 -d 420 -n 1");
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(
                     p.getInputStream()));
 
-            String line;
-            String finalString;
-            String resultString;
+
             while ((line = reader.readLine()) != null) {
-                finalString = line.trim();
-                if (!line.isEmpty() && Character.isDigit(finalString.charAt(0))) {
-                    resultString = finalString.replace("%", "");
+                trimmedString = line.trim();
+                if (!line.isEmpty() && Character.isDigit(trimmedString.charAt(0))) {
+                    resultString = trimmedString.replace("%", "");
                     Log.e("Output ", resultString);
                     list.add(resultString);
                 }
@@ -208,8 +181,13 @@ public class CpuMonitor {
         return list;
     }
 
-    //TODO add actions for cancel and open
-    private void cpuNotify(String title, String text) {
+    /**
+     * Creates a notification that launches when CPU load is exceeded. Ensures correct management
+     * of the backstack allowing for correct navigation
+     *
+     * @param text applications that exceed CPU load
+     */
+    private void cpuNotify(String text) {
 
         final Notification.Builder mBuilder = new Notification.Builder(context);
         mBuilder.setStyle(new Notification.BigTextStyle(mBuilder)
@@ -224,7 +202,7 @@ public class CpuMonitor {
         TaskStackBuilder stackBuilder = TaskStackBuilder.create(context);
         Intent resultIntent = new Intent(android.provider.Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS);
 
-        stackBuilder.addParentStack(MainActivity.class);
+        stackBuilder.addParentStack(WeeklyStatsActivity.class);
         stackBuilder.addNextIntent(resultIntent);
         PendingIntent resultPendingIntent =
                 stackBuilder.getPendingIntent(
@@ -237,6 +215,13 @@ public class CpuMonitor {
         mNotificationManager.notify(0, mBuilder.build());
     }
 
+    /**
+     * Gets the package name of the process id
+     *
+     * @param context the application context
+     * @param pid     process id
+     * @return package name associated with the process id
+     */
     private String getAppNameByPID(Context context, int pid) {
         PackageManager pm = context.getPackageManager();
         ActivityManager manager
@@ -261,6 +246,12 @@ public class CpuMonitor {
         return "";
     }
 
+    /**
+     * Determines whether the given package is an Android application or third party
+     *
+     * @param pkgInfo given package to check
+     * @return whether system flag has been set
+     */
     private boolean isSystemPackage(PackageInfo pkgInfo) {
         return (pkgInfo.applicationInfo.flags &
                 ApplicationInfo.FLAG_SYSTEM) != 0;
@@ -290,7 +281,7 @@ public class CpuMonitor {
                         }
                     }
                     if (!highUsageApps.equals("")) {
-                        cpuNotify("High CPU usage detected", highUsageApps);
+                        cpuNotify(highUsageApps);
                         highUsageApps = "";
                     }
 

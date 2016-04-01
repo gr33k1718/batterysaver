@@ -30,6 +30,9 @@ public class DatabaseLogger {
         openDBs();
     }
 
+    /**
+     * Opens both readable and writable databases connections.
+     */
     private void openDBs() {
         if (rdb == null || !rdb.isOpen()) {
             try {
@@ -48,6 +51,9 @@ public class DatabaseLogger {
         }
     }
 
+    /**
+     * Closes the database connections.
+     */
     public void close() {
         if (rdb != null)
             rdb.close();
@@ -55,19 +61,75 @@ public class DatabaseLogger {
             wdb.close();
     }
 
-    public void copyTable() {
+    /**
+     *
+     */
+    public void copyAndMerge() {
 
         openDBs();
 
         try {
-            wdb.execSQL("DROP TABLE IF EXISTS " + Constants.LOG_TABLE_NAME_TWO);
-            wdb.execSQL("CREATE TABLE " + Constants.LOG_TABLE_NAME_TWO + " as SELECT * FROM " + Constants.LOG_TABLE_NAME_ONE);
+            Cursor cursor = wdb.rawQuery("SELECT * FROM " + Constants.LOG_TABLE_NAME_ONE, null);
+
+            if (cursor.moveToFirst()) {
+                do {
+                    int day = cursor.getInt(1);
+                    int period = cursor.getInt(2);
+                    int battery = cursor.getInt(3);
+                    int charging = cursor.getInt(4);
+                    int brightness = cursor.getInt(5);
+                    long timeout = cursor.getLong(6);
+                    long screen = cursor.getLong(7);
+                    int cpuLoad = cursor.getInt(8);
+                    long networkTraffic = cursor.getLong(9);
+                    long mobileTraffic = cursor.getLong(10);
+
+                    long prevScreen = 0;
+                    long prevNetworkTraffic = 0;
+                    long prevMobileTraffic = 0;
+                    int prevCpuLoad = 0;
+
+                    Cursor prevCursor = wdb.rawQuery("SELECT * FROM " + Constants.LOG_TABLE_NAME_TWO +
+                            " WHERE " + Constants.DAY_PREF + " = " + day + " AND "
+                            + Constants.PERIOD_PREF + " = " + period, null);
+                    if (prevCursor != null && prevCursor.getCount() > 0) {
+
+                        prevCursor.moveToFirst();
+                        prevScreen = prevCursor.getLong(7);
+                        prevNetworkTraffic = prevCursor.getLong(9);
+                        prevMobileTraffic = prevCursor.getLong(10);
+                        prevCpuLoad = prevCursor.getInt(8);
+                        Log.e("[Error]", "" + screen + " " + networkTraffic);
+
+                    }
+                    wdb.execSQL("INSERT INTO " + Constants.LOG_TABLE_NAME_TWO + " VALUES (NULL, "
+                            + day + " ,"
+                            + period + " ,"
+                            + battery + " ,"
+                            + charging + " ,"
+                            + brightness + " ,"
+                            + timeout + " ,"
+                            + getWeightedAverage(prevScreen, screen) + " ,"
+                            + getWeightedAverage(prevCpuLoad, cpuLoad) + " ,"
+                            + getWeightedAverage(prevNetworkTraffic, networkTraffic) + " ,"
+                            + getWeightedAverage(prevMobileTraffic, mobileTraffic)
+                            + ")");
+                } while (cursor.moveToNext());
+            }
+
             close();
+
+            clearAllLogs(Constants.LOG_TABLE_NAME_ONE);
+
         } catch (Exception e) {
 
         }
     }
 
+    /**
+     * @param day
+     * @return
+     */
     public List<String> getAllLogs(int day) {
         List<String> logs = new LinkedList<>();
         openDBs();
@@ -96,20 +158,21 @@ public class DatabaseLogger {
         return logs;
     }
 
+    /**
+     * @return
+     */
     public UsageProfile[][] getUsagePatterns() {
         Log.d("[hi]", "profiles");
 
         UsageProfile prevUsage = null;
         UsageProfile currentUsage;
 
-        int singlePeriod;
-        int multiPeriod;
         int totalBatteryUsed = 0;
 
         boolean multi = false;
 
 
-        final long MAX_IDLE = 10000;
+        final long MAX_IDLE = 60000;
         final long MIN_HIGH_INTERACTION = 1800000;
         final long MIN_HIGH_NETWORK = 4000000;
         final float MIN_HIGH_CPU = 34;
@@ -122,15 +185,15 @@ public class DatabaseLogger {
 
         if (cursor.moveToFirst()) {
             do {
+                int batteryUsage = 0;
                 int day = cursor.getInt(1);
                 int period = cursor.getInt(2);
                 int battery = cursor.getInt(3);
                 int charging = cursor.getInt(4);
-                long screen = cursor.getLong(7);
-                int batteryUsage = 0;
-                int cpuLoad = cursor.getInt(8);
                 int brightness = cursor.getInt(5);
                 long timeout = cursor.getLong(6);
+                long screen = cursor.getLong(7);
+                int cpuLoad = cursor.getInt(8);
                 long networkTraffic = cursor.getLong(9);
                 long mobileTraffic = cursor.getLong(10);
                 long totalTraffic = networkTraffic + mobileTraffic;
@@ -139,7 +202,7 @@ public class DatabaseLogger {
                         charging, brightness, timeout, battery, networkTraffic, mobileTraffic, screen, cpuLoad);
 
                 //Determine usage type/s
-                if (screen < MAX_IDLE && totalTraffic < 100000) {
+                if (screen < MAX_IDLE && totalTraffic < 100000 && cpuLoad < 10) {
                     currentUsage.setIdle(true);
 
                 } else if (screen > MIN_HIGH_INTERACTION) {
@@ -161,21 +224,21 @@ public class DatabaseLogger {
                         multi = true;
                         prevUsage = currentUsage.merge(prevUsage);
 
-                        batteryUsage = Predictor.predictBatteryUsage(networkTraffic,mobileTraffic,cpuLoad,screen,brightness);
+                        batteryUsage = Predictor.predictBatteryUsage(networkTraffic, mobileTraffic, cpuLoad, screen, brightness);
                         //Log.d("[hi]", "\n\nPrev " + batteryUsage);
                         prevUsage.setBatteryUsed(batteryUsage + prevUsage.getBatteryUsed());
 
 
                     } else {
-                        if(!multi){
-                            int cpu = (int)prevUsage.getCpu();
+                        if (!multi) {
+                            int cpu = (int) prevUsage.getCpu();
                             long inter = prevUsage.getInteractionTime();
                             long network = prevUsage.getNetworkUsage();
                             long mobile = prevUsage.getMobileUsage();
                             int bright = prevUsage.getBrightness();
 
-                            int batteryUsages = Predictor.predictBatteryUsage(network,mobile,cpu,inter,bright);
-                            prevUsage.setBatteryUsed(batteryUsages);
+                            int totalBatteryUsage = Predictor.predictBatteryUsage(network, mobile, cpu, inter, bright);
+                            prevUsage.setBatteryUsed(totalBatteryUsage);
 
                         }
                         multi = false;
@@ -202,34 +265,15 @@ public class DatabaseLogger {
 
     //TODO get charging times and implement generateStats setting wich allows user to take them into account
     //TODO determine battery used per stat
+
+    /**
+     * @param info
+     * @param day
+     */
     public void fill(SystemContext info, String day) {
         ArrayList<String> shit = new ArrayList<String>();
         shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 0, 100, 1, 255, 15000, 0, 10, 47331, 0)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 1, 100, 1, 255, 15000, 0, 11, 98742, 0)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 2, 100, 1, 255, 15000, 0, 12, 12313, 0)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 3, 100, 1, 255, 15000, 0, 7, 9064, 0)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 4, 100, 1, 255, 15000, 0, 8, 5324, 0)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 5, 100, 1, 255, 15000, 0, 5, 4232, 0)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 6, 100, 1, 255, 15000, 0, 9, 13441, 0)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 7, 100, 1, 255, 15000, 42776, 16, 5532, 0)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 8, 98, 0, 255, 15000, 637731, 19, 3123441, 0)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 9, 95, 0, 255, 15000, 12331, 15, 33133, 0)");
 
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 10, 95, 0, 255, 15000, 60003, 13, 44332, 0)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 11, 94, 0, 255, 15000, 65544, 19, 88754, 0)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 12, 93, 0, 255, 15000, 32455, 14, 65245, 0)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 13, 92, 0, 255, 15000, 1904437, 32, 0, 4344552)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 14, 88, 0, 255, 15000, 31244, 21, 77644, 0)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 15, 87, 0, 255, 15000, 77765, 14, 76543, 0)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 16, 86, 0, 255, 15000, 1008390, 19, 54344, 0)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 17, 84, 0, 255, 15000, 42776, 14, 55231, 0)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 18, 82, 0, 255, 15000, 1033382, 28, 3455515, 0)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 19, 78, 0, 255, 15000, 1848470, 35, 985893, 0)");
-
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 20, 76, 0, 255, 15000, 1198977, 19, 441088, 0)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 21, 77, 1, 255, 15000, 32333, 17, 42233, 0)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 22, 96, 1, 255, 15000, 20039, 21, 245535, 0)");
-        shit.add("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, " + day + ", 23, 100, 1, 255, 15000, 0, 16, 321345, 0)");
         openDBs();
 
         try {
@@ -243,38 +287,29 @@ public class DatabaseLogger {
     }
 
     //TODO fix this
+
+    /**
+     * @param prev
+     * @param current
+     * @return
+     */
     private long getWeightedAverage(long prev, long current) {
-        double weightPrev = 0.75;
-        double weightCurrent = 1.25;
+        double weightPrev = 1.25;
+        double weightCurrent = 0.75;
 
         return prev != 0 ? (long) ((prev * weightPrev) + (current * weightCurrent)) / 2 : current;
     }
 
+    /**
+     * @param info
+     */
     public void logStatus(SystemContext info) {
 
         openDBs();
 
-        long screen = 0;
-        long networkTraffic = 0;
-        long mobileTraffic = 0;
-        int cpuLoad = 0;
-
         //Get previous row and determine weighted average
 
         try {
-            Cursor cursor = wdb.rawQuery("SELECT * FROM " + Constants.LOG_TABLE_NAME_TWO +
-                    " WHERE " + Constants.DAY_PREF + " = " + info.day + " AND "
-                    + Constants.PERIOD_PREF + " = " + info.period, null);
-            if (cursor != null && cursor.getCount() > 0) {
-
-                cursor.moveToFirst();
-                screen = cursor.getLong(7);
-                networkTraffic = cursor.getLong(9);
-                mobileTraffic = cursor.getLong(10);
-                cpuLoad = cursor.getInt(8);
-                Log.e("[Error]", "" + screen + " " + networkTraffic);
-
-            }
 
             wdb.execSQL("INSERT INTO " + Constants.LOG_TABLE_NAME_ONE + " VALUES (NULL, "
                     + info.day + " ,"
@@ -283,10 +318,10 @@ public class DatabaseLogger {
                     + info.charging + " ,"
                     + info.brightness + " ,"
                     + info.timeOut + " ,"
-                    + getWeightedAverage(screen, info.interactionTime)+ " ,"
-                    + getWeightedAverage(cpuLoad,info.cpuLoad) + " ,"
-                    + getWeightedAverage(networkTraffic,info.networkTraffic) + " ,"
-                    + getWeightedAverage(mobileTraffic,info.mobileTraffic)
+                    + info.interactionTime + " ,"
+                    + info.cpuLoad + " ,"
+                    + info.networkTraffic + " ,"
+                    + info.mobileTraffic
                     + ")");
 
             close();
@@ -297,6 +332,9 @@ public class DatabaseLogger {
 
     }
 
+    /**
+     * @param id
+     */
     public void deleteLog(String id) {
 
         openDBs();
@@ -308,6 +346,9 @@ public class DatabaseLogger {
         }
     }
 
+    /**
+     * @param table
+     */
     public void clearAllLogs(String table) {
         mSQLOpenHelper.reset(table);
     }
@@ -318,7 +359,7 @@ public class DatabaseLogger {
         }
 
         private String createTable(String name) {
-            return "CREATE TABLE " + name + " ("
+            return "CREATE TABLE IF NOT EXISTS " + name + " ("
                     + KEY_ID + " INTEGER PRIMARY KEY,"
                     + Constants.DAY_PREF + " INTEGER, "
                     + Constants.PERIOD_PREF + " INTEGER,"
@@ -333,21 +374,39 @@ public class DatabaseLogger {
                     + ");";
         }
 
+        /**
+         * @param db
+         */
         @Override
         public void onCreate(SQLiteDatabase db) {
+            db.execSQL(createTable(Constants.LOG_TABLE_NAME_TWO));
             db.execSQL(createTable(Constants.LOG_TABLE_NAME_ONE));
         }
 
+        /**
+         * @param db
+         * @param oldVersion
+         * @param newVersion
+         */
         @Override
         public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
 
             db.execSQL(createTable(Constants.LOG_TABLE_NAME_TWO));
         }
 
+        /**
+         * @param table
+         */
         public void reset(String table) {
             SQLiteDatabase db = getWritableDatabase();
-            db.execSQL("DROP TABLE IF EXISTS " + table);
-            onCreate(db);
+            if (table.equals(Constants.LOG_TABLE_NAME_ONE)) {
+                db.execSQL("DROP TABLE IF EXISTS " + table);
+                db.execSQL(createTable(Constants.LOG_TABLE_NAME_ONE));
+            } else {
+                db.execSQL("DROP TABLE IF EXISTS " + table);
+                db.execSQL(createTable(Constants.LOG_TABLE_NAME_TWO));
+            }
+
         }
     }
 }

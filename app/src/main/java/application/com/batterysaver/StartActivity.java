@@ -3,7 +3,6 @@ package application.com.batterysaver;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -13,7 +12,7 @@ import android.widget.ListView;
 
 import java.util.ArrayList;
 
-public class MainActivity2 extends Activity {
+public class StartActivity extends Activity {
     private ListView lv;
     private Adapter listAdapter;
     private DatabaseLogger database;
@@ -59,12 +58,12 @@ public class MainActivity2 extends Activity {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, final int position, final long id) {
                 if (position == 0) {
-                    Intent myIntent = new Intent(MainActivity2.this, MainActivity.class);
-                    MainActivity2.this.startActivity(myIntent);
+                    Intent myIntent = new Intent(StartActivity.this, WeeklyStatsActivity.class);
+                    StartActivity.this.startActivity(myIntent);
                 } else {
-                    Intent myIntent = new Intent(MainActivity2.this, LogsActivity.class);
+                    Intent myIntent = new Intent(StartActivity.this, LogsActivity.class);
                     myIntent.putExtra("key", position - 1);
-                    MainActivity2.this.startActivity(myIntent);
+                    StartActivity.this.startActivity(myIntent);
                 }
             }
         });

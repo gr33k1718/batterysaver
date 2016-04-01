@@ -6,9 +6,6 @@ import android.os.Build;
 
 import com.google.gson.Gson;
 
-/**
- * Created by gr33k1718 on 20/02/2016.
- */
 public class PreferencesUtil {
 
     private static PreferencesUtil sInstance;
@@ -89,10 +86,10 @@ public class PreferencesUtil {
     }
 
     public void commit() {
-        if (mUseApply)
+        /*if (mUseApply)
             prefsEditor.apply();
 
-        else
-            prefsEditor.commit();
+        else*/
+        prefsEditor.commit();
     }
 }

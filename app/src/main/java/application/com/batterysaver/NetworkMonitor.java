@@ -29,18 +29,6 @@ public class NetworkMonitor {
         this.networkLimit = networkLimit;
     }
 
-    public void startNetworkMonitor() {
-        networkMonitor.start();
-    }
-
-    public void stopNetworkMonitor() {
-        networkMonitor.interrupt();
-    }
-
-    public boolean isAlive() {
-        return networkMonitor.isAlive();
-    }
-
     public static long[] getTrafficStats() {
 
         ConnectivityManager manager = (ConnectivityManager) context
@@ -137,6 +125,18 @@ public class NetworkMonitor {
         return bytes;
     }
 
+    public void startNetworkMonitor() {
+        networkMonitor.start();
+    }
+
+    public void stopNetworkMonitor() {
+        networkMonitor.interrupt();
+    }
+
+    public boolean isAlive() {
+        return networkMonitor.isAlive();
+    }
+
     private void networkNotify(String title, String text) {
 
         final Notification.Builder mBuilder = new Notification.Builder(context);
@@ -153,7 +153,7 @@ public class NetworkMonitor {
         TaskStackBuilder stackBuilder = TaskStackBuilder.create(context);
         Intent resultIntent = new Intent(android.provider.Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS);
 
-        stackBuilder.addParentStack(MainActivity.class);
+        stackBuilder.addParentStack(WeeklyStatsActivity.class);
         stackBuilder.addNextIntent(resultIntent);
         PendingIntent resultPendingIntent =
                 stackBuilder.getPendingIntent(

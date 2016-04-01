@@ -17,7 +17,6 @@ import android.widget.Toast;
 import com.github.mikephil.charting.data.Entry;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class LogsActivity extends Activity {
@@ -152,14 +151,14 @@ public class LogsActivity extends Activity {
     private void setupAdapter() {
         DatabaseLogger databaseLogger = new DatabaseLogger(this);
         Log.e("[Error]", "" + value);
-        Arrays.asList(databaseLogger.getUsagePatterns()[value]);
+        //Arrays.asList(databaseLogger.getUsagePatterns()[value]);
         logs = new DatabaseLogger(getApplicationContext()).getAllLogs(value + 1);
         listAdapter = new Adapter(this, R.layout.list_item2, logs, false);
 
         lv.setAdapter(listAdapter);
     }
 
-    private ArrayList<String> savingLogs() {
+    /*private ArrayList<String> savingLogs() {
         DatabaseLogger databaseLogger = new DatabaseLogger(this);
         UsageProfile[] u = databaseLogger.getUsagePatterns()[value];
         ArrayList<String> menu = new ArrayList<>();
@@ -172,5 +171,5 @@ public class LogsActivity extends Activity {
 
         return menu;
     }
-
+*/
 }
