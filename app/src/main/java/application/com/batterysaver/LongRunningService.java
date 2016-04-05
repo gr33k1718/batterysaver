@@ -12,10 +12,10 @@ public class LongRunningService extends Service {
     public void onCreate() {
         super.onCreate();
         displayMonitor = new DisplayMonitor();
-        cpuMonitor = new CpuMonitor();
+        //cpuMonitor = new CpuMonitor();
 
         displayMonitor.registerReceiver();
-        cpuMonitor.monitorCpuLoad();
+        //cpuMonitor.monitorCpuLoad();
     }
 
     @Override

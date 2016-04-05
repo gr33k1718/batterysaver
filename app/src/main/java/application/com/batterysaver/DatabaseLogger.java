@@ -170,6 +170,7 @@ public class DatabaseLogger {
         int totalBatteryUsed = 0;
 
         boolean multi = false;
+        boolean first = true;
 
 
         final long MAX_IDLE = 60000;
@@ -185,6 +186,8 @@ public class DatabaseLogger {
 
         if (cursor.moveToFirst()) {
             do {
+                int singlePeriod = 0;
+                int multiPeriod = 0;
                 int batteryUsage = 0;
                 int day = cursor.getInt(1);
                 int period = cursor.getInt(2);
@@ -220,33 +223,29 @@ public class DatabaseLogger {
                 if (prevUsage != null) {
 
 
-                    if (currentUsage.equals(prevUsage)) {
-                        multi = true;
+                    if(currentUsage.equals(prevUsage)){
+                        if(first){
+                            totalBatteryUsed = prevUsage.getBatteryLevel();
+                            first = false;
+                        }
                         prevUsage = currentUsage.merge(prevUsage);
 
-                        batteryUsage = Predictor.predictBatteryUsage(networkTraffic, mobileTraffic, cpuLoad, screen, brightness);
-                        //Log.d("[hi]", "\n\nPrev " + batteryUsage);
-                        prevUsage.setBatteryUsed(batteryUsage + prevUsage.getBatteryUsed());
-
-
-                    } else {
-                        if (!multi) {
-                            int cpu = (int) prevUsage.getCpu();
-                            long inter = prevUsage.getInteractionTime();
-                            long network = prevUsage.getNetworkUsage();
-                            long mobile = prevUsage.getMobileUsage();
-                            int bright = prevUsage.getBrightness();
-
-                            int totalBatteryUsage = Predictor.predictBatteryUsage(network, mobile, cpu, inter, bright);
-                            prevUsage.setBatteryUsed(totalBatteryUsage);
-
+                    }
+                    else{
+                        //If phone was charging over the period return 0
+                        if(prevUsage.getEnd() - prevUsage.getStart() > 1){
+                            multiPeriod  = totalBatteryUsed - currentUsage.getBatteryLevel();
+                            prevUsage.setBatteryUsed(multiPeriod > 0 ? multiPeriod : 0);
                         }
-                        multi = false;
+                        else{
+                            singlePeriod = prevUsage.getBatteryLevel() - currentUsage.getBatteryLevel();
+                            prevUsage.setBatteryUsed(singlePeriod > 0 ? singlePeriod : 0);
+                        }
 
-                        Log.d("[hi]", "\n\nPrev " + prevUsage + " " + prevUsage.getDay() + " " + totalBatteryUsed);
-                        group[prevUsage.getDay() - 1][prevUsage.getStart()] = prevUsage;
+                        Log.d("[hi]", "\n\nPrev " + prevUsage + " " + totalBatteryUsed);
+                        group[prevUsage.getDay()][prevUsage.getStart()] = prevUsage;
                         prevUsage = currentUsage;
-
+                        first = true;
                     }
                 } else {
                     prevUsage = currentUsage;

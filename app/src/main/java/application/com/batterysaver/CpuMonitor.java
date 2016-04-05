@@ -38,7 +38,7 @@ public class CpuMonitor {
     }
 
     /**
-     * Determines the total CPU but parsing the output of the Linux TOP command
+     * Determines the total CPU by parsing the output of the Linux TOP command
      *
      * @param delay the delay passed to the TOP command
      * @return the total CPU load over the period
@@ -75,7 +75,7 @@ public class CpuMonitor {
      *
      * @return total CPU load
      */
-    public static int getTotalCpuLoad() {
+    public int getTotalCpuLoad() {
 
         return pref.getInt(Constants.CPU_LOAD_PREF_INT, 0);
     }
@@ -110,6 +110,7 @@ public class CpuMonitor {
                     try {
                         Thread.sleep(270000);
                     } catch (InterruptedException e) {
+                        Log.e("[Error]", "Thread interrupted");
                     }
 
                 }

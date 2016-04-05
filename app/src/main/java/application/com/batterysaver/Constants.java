@@ -17,6 +17,7 @@ public class Constants {
     public static final String MOBILE_TRAFFIC_PREF = "mobileTraffic";
     public static final String CPU_LOAD_PREF = "cpuLoad";
     public static final String CPU_LOAD_PREF_INT = "cpuLoadInt";
+    public static final String CPU_LOAD_PREF_DOUBLE = "cpuLoadDouble";
     public static final String IS_CHARGING_PREF = "isCHarging";
 
     public static final String LOG_TABLE_NAME_ONE = "logs";

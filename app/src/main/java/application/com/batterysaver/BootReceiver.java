@@ -15,7 +15,7 @@ public class BootReceiver extends BroadcastReceiver {
 
         hourlyLogAlarm();
 
-        weeklyProfileAlarm();
+        //weeklyProfileAlarm();
     }
 
     /**
@@ -37,12 +37,12 @@ public class BootReceiver extends BroadcastReceiver {
 
         AlarmManager alarmManager = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
 
-        alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, time.getTimeInMillis(), AlarmManager.INTERVAL_HOUR, p);
+        alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), 300000, p);
     }
 
     /**
      * Creates a repeatable task that starts 30 min after the logging service. Activated on a weekly
-     * basis which starts a service that clears and copies current usage to another table.
+     * basis which starts a service that clears and copies current usage to another database table.
      */
     private void weeklyProfileAlarm() {
         String actionName = "weeklyService";

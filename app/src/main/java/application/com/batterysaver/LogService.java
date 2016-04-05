@@ -8,6 +8,7 @@ import android.os.BatteryManager;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.provider.Settings;
+import android.util.Log;
 
 import java.util.Calendar;
 
@@ -36,7 +37,9 @@ public class LogService extends Service {
         period = cal.get(Calendar.HOUR_OF_DAY);
         database = new DatabaseLogger(this);
 
-        logContext();
+        //gatherData();
+
+        logData();
 
         stopSelf();
     }
@@ -65,39 +68,36 @@ public class LogService extends Service {
     /*
      *  Gathers the context information related to the user and stores within the database.
      */
-    public void logContext() {
+    public void gatherData() {
+        Intent batteryIntent = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
         DisplayMonitor displayMonitor = new DisplayMonitor();
-        int isCharging, period, day, brightness, timeOut, status, batteryLevel;
-        long interactionTime;
-        long[] trafficStats;
-        int cpuLoad;
-        SystemContext systemContext;
+
         Calendar cal = Calendar.getInstance();
         cal.add(Calendar.HOUR_OF_DAY, -1);
-
-        Intent batteryIntent = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
-        status = batteryIntent.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
-
         period = cal.get(Calendar.HOUR_OF_DAY);
         day = cal.get(Calendar.DAY_OF_WEEK);
 
-        trafficStats = NetworkMonitor.getTrafficStats();
-        cpuLoad = cpuMonitor.getTotalCpuLoad();
-        brightness = displayMonitor.screenBrightness();
-        timeOut = displayMonitor.screenTimeout();
-        isCharging = (status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL) ? 1 : 0;
-        interactionTime = displayMonitor.getInteractionTime();
-        batteryLevel = Predictor.milliAmpPerHpur(trafficStats[0], trafficStats[1], cpuLoad, interactionTime, brightness);
+        int status = batteryIntent.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+        int batteryLevel = batteryIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+        int isCharging = (status == BatteryManager.BATTERY_STATUS_CHARGING
+                || status == BatteryManager.BATTERY_STATUS_FULL) ? 1 : 0;
 
-        systemContext = new SystemContext(day, period, isCharging, brightness, batteryLevel,
+        long[] trafficStats = NetworkMonitor.getTrafficStats();
+
+        int cpuLoad = cpuMonitor.getTotalCpuLoad();
+
+        int brightness = displayMonitor.screenBrightness();
+        int timeOut = displayMonitor.screenTimeout();
+        long interactionTime =  displayMonitor.getInteractionTime();
+
+
+        SystemContext systemContext  = new SystemContext(day, period, isCharging, brightness, batteryLevel,
                 timeOut, trafficStats[0], trafficStats[1], interactionTime, cpuLoad);
 
         database.logStatus(systemContext);
 
         restartService();
         //database.copyTable();
-
-
     }
 
     /*
@@ -149,5 +149,37 @@ public class LogService extends Service {
             networkMonitor.stopNetworkMonitor();
         }
     }
+
+    private double movingAvg(int count, int prev, int cur){
+        return ((prev * count) + cur)/(double)(count +1);
+    }
+
+    private void logData(){
+        int count = prefs.getInt("Count",1);
+
+        int prevCpuLoad = prefs.getInt(Constants.CPU_LOAD_PREF_INT, 0);
+
+        int curCpuLoad = CpuMonitor.readCpuUsage(5);
+
+        double avgLoad = movingAvg(count,prevCpuLoad,curCpuLoad);
+
+        Log.e("[Error]", "Count " + count + " Prev " + prevCpuLoad + " Current " + curCpuLoad + " Result " + avgLoad);
+
+        //Log every 60 min: 5 min alarm * 12
+        if(count % 12 == 0){
+            gatherData();
+
+            prefs.putInt(Constants.CPU_LOAD_PREF_INT, 0);
+            prefs.putInt("Count",1);
+        }
+        else{
+            prefs.putInt(Constants.CPU_LOAD_PREF_INT, (int)avgLoad);
+            prefs.putInt("Count", count + 1 );
+
+        }
+
+        prefs.commit();
+    }
+
 }
 
