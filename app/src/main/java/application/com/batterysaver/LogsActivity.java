@@ -21,6 +21,7 @@ import java.io.FileFilter;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -42,7 +43,7 @@ public class LogsActivity extends Activity {
         Intent intent = getIntent();
         value = intent.getIntExtra("key", 0);
 
-        //removeItem();
+        removeItem();
 
 
 /*
@@ -84,7 +85,9 @@ public class LogsActivity extends Activity {
         setupAdapter();
     }
 
-
+    public double scale(final double valueIn, final double baseMin, final double baseMax, final double limitMin, final double limitMax) {
+        return ((limitMax - limitMin) * (valueIn - baseMin) / (baseMax - baseMin)) + limitMin;
+    }
     private ArrayList<Entry> entries(double[] usage) {
         ArrayList<Entry> entries = new ArrayList<>();
         entries.add(new Entry((float) usage[0], 0));
@@ -169,7 +172,7 @@ public class LogsActivity extends Activity {
     private void setupAdapter() {
         DatabaseLogger databaseLogger = new DatabaseLogger(this);
         Log.e("[Error]", "" + value);
-        //Arrays.asList(databaseLogger.getUsagePatterns()[value]);
+        Arrays.asList(databaseLogger.getUsagePatterns()[value]);
         logs = new DatabaseLogger(getApplicationContext()).getAllLogs(value + 1);
         listAdapter = new Adapter(this, R.layout.list_item2, logs, false);
 

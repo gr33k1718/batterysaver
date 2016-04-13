@@ -20,14 +20,51 @@ public class SavingsProfile {
     }
 
     public SavingsProfile generate() {
+
+        return this;
+    }
+
+    public int getDay() {
+        return day;
+    }
+
+    public int getStartTime() {
+        return startTime;
+    }
+
+    public int getBrightness() {
+        return brightness;
+    }
+
+    public long getTimeout() {
+        return timeout;
+    }
+
+    public long getNetworkWarningLimit() {
+        return networkWarningLimit;
+    }
+
+    public boolean isSetCpuMonitor() {
+        return setCpuMonitor;
+    }
+
+    public boolean isSetNetworkMonitor() {
+        return setNetworkMonitor;
+    }
+    /*
+    public SavingsProfile generate() {
+        String usageType = usageProfile.getUsageType();
+
         int brightness = usageProfile.getBrightness();
         long timeout = usageProfile.getTimeout();
+
         this.day = usageProfile.getDay();
         this.startTime = usageProfile.getStart();
         this.endtime = usageProfile.getEnd();
         this.timeout = 15000;
 
-        if (usageProfile.isIdle()) {
+
+        if (usageProfile.getUsageType()) {
             this.brightness = 30;
         } else {
             if (brightness > 168) {
@@ -65,35 +102,7 @@ public class SavingsProfile {
 
         return this;
     }
-
-    public int getDay() {
-        return day;
-    }
-
-    public int getStartTime() {
-        return startTime;
-    }
-
-    public int getBrightness() {
-        return brightness;
-    }
-
-    public long getTimeout() {
-        return timeout;
-    }
-
-    public long getNetworkWarningLimit() {
-        return networkWarningLimit;
-    }
-
-    public boolean isSetCpuMonitor() {
-        return setCpuMonitor;
-    }
-
-    public boolean isSetNetworkMonitor() {
-        return setNetworkMonitor;
-    }
-
+    */
     @Override
     public String toString() {
         return "start: " + startTime +

@@ -1,19 +1,30 @@
 package application.com.batterysaver;
 
 import android.app.Activity;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.net.NetworkInfo;
+import android.net.wifi.SupplicantState;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
+import android.os.BatteryManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
 import android.widget.AdapterView;
 import android.widget.ListView;
+import android.widget.TextView;
 
 import java.util.ArrayList;
 
 public class StartActivity extends Activity {
     private ListView lv;
+    private TextView textView;
     private Adapter listAdapter;
     private DatabaseLogger database;
 
@@ -23,14 +34,18 @@ public class StartActivity extends Activity {
         this.requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.activity_main2);
         lv = (ListView) findViewById(R.id.mylist2);
+        textView = (TextView)findViewById(R.id.textView);
 
-        //database = new DatabaseLogger(this);
+        BatteryManager connectivityManager = (BatteryManager)MyApplication.getAppContext().getSystemService(Context.BATTERY_SERVICE);
+        //long capacity = connectivityManager.getLongProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER);
+        int avgMah = connectivityManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_AVERAGE);
+        int mAh = connectivityManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW);
 
-        //database.fill(null,"1");
+        database = new DatabaseLogger(this);
 
         setupAdapter();
 
-        viewShit();
+        viewData();
     }
 
     @Override
@@ -52,7 +67,7 @@ public class StartActivity extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
-    public void viewShit() {
+    public void viewData() {
         lv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
 
             @Override
@@ -89,5 +104,4 @@ public class StartActivity extends Activity {
 
         return menu;
     }
-
 }

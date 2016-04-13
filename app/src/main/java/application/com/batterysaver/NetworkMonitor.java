@@ -1,27 +1,34 @@
 package application.com.batterysaver;
 
+import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.Service;
 import android.app.TaskStackBuilder;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.TrafficStats;
-import android.net.wifi.WifiInfo;
-import android.net.wifi.WifiManager;
+import android.os.IBinder;
+import android.os.PowerManager;
+import android.support.annotation.Nullable;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Calendar;
 
 public class NetworkMonitor {
     private static final String RX_FILE = "/sys/class/net/wlan0/statistics/rx_bytes";
     private static final String TX_FILE = "/sys/class/net/wlan0/statistics/tx_bytes";
     private static Context context = MyApplication.getAppContext();
-    private static PreferencesUtil pref = PreferencesUtil.getInstance(context, Constants.NETWORK_PREFS, Context.MODE_PRIVATE);
+    private static PreferencesUtil pref = PreferencesUtil.getInstance(context,
+            Constants.NETWORK_PREFS, Context.MODE_PRIVATE);
     private Thread networkMonitor = new Thread(new NetworkRunnable());
     private long networkLimit;
 
@@ -45,7 +52,7 @@ public class NetworkMonitor {
         long prevMobileStats = pref.getLong(Constants.MOBILE_TRAFFIC_PREF, 0);
         long prevTotalBytes = pref.getLong("TOTAL_TRAFFIC", 0);
 
-        long currentNetworkStats = readFile(TX_FILE) + readFile(RX_FILE);
+        long currentNetworkStats = getWifiTraffic(TX_FILE) + getWifiTraffic(RX_FILE);
         long currentMobileStats = TrafficStats.getMobileRxBytes() + TrafficStats.getMobileTxBytes();
 
         long currentTotalBytes = TrafficStats.getTotalRxBytes() + TrafficStats.getTotalTxBytes();
@@ -90,18 +97,7 @@ public class NetworkMonitor {
         pref.commit();
     }
 
-    public static int wifiSpeed() {
-        Integer linkSpeed = 0;
-        WifiManager wifiManager = (WifiManager) MyApplication.getAppContext().getSystemService(Context.WIFI_SERVICE);
-        WifiInfo wifiInfo = wifiManager.getConnectionInfo();
-        if (wifiInfo != null) {
-            linkSpeed = wifiInfo.getLinkSpeed();
-        }
-
-        return linkSpeed;
-    }
-
-    private static long readFile(String fileName) {
+    private static long getWifiTraffic(String fileName) {
         File file = new File(fileName);
         BufferedReader br = null;
         long bytes = 0;
@@ -123,6 +119,38 @@ public class NetworkMonitor {
                 }
         }
         return bytes;
+    }
+
+    public static void getUsageTimes(){
+        TelephonyManager telephonyManager = (TelephonyManager)context.getSystemService(Context.TELEPHONY_SERVICE);
+        int mobileDataActivity = telephonyManager.getDataActivity();
+
+        long currentWiFiBytes = getWifiTraffic(TX_FILE) + getWifiTraffic(RX_FILE);
+
+        long prevTotalBytes = pref.getLong("WiFiTotalBytes", currentWiFiBytes);
+
+        pref.putLong("WiFiTotalBytes", currentWiFiBytes);
+
+        if(currentWiFiBytes > prevTotalBytes){
+            int prevWifiTime = pref.getInt("WiFiTotalTimes",0);
+            pref.putInt("WiFiTotalTimes", prevWifiTime + 5);
+            Log.e("[Error]", "WiFi time " + prevWifiTime);
+        }
+
+        if(mobileDataActivity != 0 && mobileDataActivity != 4){
+            int prevMobileTime = pref.getInt("MobileTotalTime", 0);
+            pref.putInt("MobileTotalTime", prevMobileTime + 5);
+            Log.e("[Error]", "Mobile time " + prevMobileTime);
+        }
+
+        Log.e("[Error]", "Total Bytes " + (currentWiFiBytes - prevTotalBytes));
+
+        pref.commit();
+    }
+
+    public static void clearUsageTimes(){
+        pref.putInt("WiFiTotalTimes", 0);
+        pref.putInt("MobileTotalTime", 0);
     }
 
     public void startNetworkMonitor() {
@@ -194,6 +222,48 @@ public class NetworkMonitor {
                     Thread.currentThread().interrupt();
                 }
             }
+        }
+    }
+
+    public static void activateSyncSetting(int delayMin){
+
+        int delayMilli = delayMin * 60 * 1000;
+
+        Intent logIntent = new Intent(context, SyncService.class);
+
+        PendingIntent p = PendingIntent.getService(context, 1, logIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+
+        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+
+        alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), delayMilli, p);
+    }
+
+    public static class SyncService extends Service{
+        private PowerManager pm;
+        private PowerManager.WakeLock mWakeLock;
+
+        @Override
+        public void onCreate() {
+            super.onCreate();
+            pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "lock");
+            mWakeLock.acquire();
+
+            boolean masterSyncAutomatically = ContentResolver.getMasterSyncAutomatically();
+            ContentResolver.setMasterSyncAutomatically(!masterSyncAutomatically);
+            Log.e("[Error]", "" + masterSyncAutomatically);
+            stopSelf();
+        }
+
+        @Override
+        public void onDestroy() {
+            super.onDestroy();
+            mWakeLock.release();
+        }
+
+        @Override
+        public IBinder onBind(Intent intent) {
+            return null;
         }
     }
 }

@@ -13,8 +13,12 @@ import android.content.pm.PackageManager;
 import android.util.Log;
 
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.RandomAccessFile;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -38,39 +42,6 @@ public class CpuMonitor {
     }
 
     /**
-     * Determines the total CPU by parsing the output of the Linux TOP command
-     *
-     * @param delay the delay passed to the TOP command
-     * @return the total CPU load over the period
-     */
-    public static int readCpuUsage(int delay) {
-        String line = "";
-        String resultString = "";
-        int result = 0;
-
-        try {
-            Process p = Runtime.getRuntime().exec("top -m 1 -d " + delay + " -n 1");
-
-            BufferedReader reader = new BufferedReader(new InputStreamReader(
-                    p.getInputStream()));
-
-            for (int i = 0; i < 4; i++) {
-                line = reader.readLine();
-            }
-
-            resultString = line.replaceAll("[%a-zA-Z,]", "");
-            resultString.trim();
-            result = parseCpuLoad(resultString);
-
-            Log.e("[Error]", "New read CPU usage " + resultString + " " + result);
-            p.waitFor();
-
-        } catch (Exception e) {
-        }
-        return result;
-    }
-
-    /**
      * Retrieves the total CPU load from shared preferences.
      *
      * @return total CPU load
@@ -80,48 +51,25 @@ public class CpuMonitor {
         return pref.getInt(Constants.CPU_LOAD_PREF_INT, 0);
     }
 
-    /**
-     * Responsible for monitoring the CPU load of the processor. Stays alive for 50 min recording
-     * CPU load for 30 seconds every 5 min. The average is taken and stored within shared
-     * preferences.
-     */
-    public void monitorCpuLoad() {
-        Log.e("[Error]", "Cpu thread");
-        ExecutorService threadPoolExecutor = Executors.newSingleThreadExecutor();
+    public static float readCpuUsage() {
+        String[] loadAvgs = new String[3];
+        int numCPU = 8;
+        try {
 
-        Runnable cpuLoadRunnable = new Runnable() {
-            @Override
-            public void run() {
-                int cpuLoad = 0;
-                int result = 0;
+            RandomAccessFile reader = new RandomAccessFile("/proc/loadavg", "r");
 
-                for (int i = 0; i < 10; i++) {
+            String s = reader.readLine();
+            loadAvgs = s.split(" +");
 
-                    try {
-                        cpuLoad = readCpuUsage(30);
-                    } catch (NumberFormatException e) {
-                        Log.e("[Error]", "" + e.toString());
-                    }
+            reader.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
-                    Log.e("[Error]", "" + cpuLoad);
-
-                    result += cpuLoad;
-
-                    try {
-                        Thread.sleep(270000);
-                    } catch (InterruptedException e) {
-                        Log.e("[Error]", "Thread interrupted");
-                    }
-
-                }
-                Log.e("[Error]", "Average cpu " + (int) (result / 10.0));
-                pref.putInt(Constants.CPU_LOAD_PREF_INT, (int) (result / 10.0));
-
-                pref.commit();
-            }
-        };
-
-        threadPoolExecutor.submit(cpuLoadRunnable);
+        float result = (Float.parseFloat(loadAvgs[2])/numCPU) * 100;
+        return result;
     }
 
     /**
@@ -146,6 +94,45 @@ public class CpuMonitor {
      */
     public boolean isAliveCpuMonitor() {
         return cpuMonitor.isAlive();
+    }
+
+    public static ArrayList<String> readCpuUsage(int delay) {
+        String line = "";
+        String resultString = "";
+        int result = 0;
+        String trimmedString;
+        String resultString2;
+        ArrayList<String> list = new ArrayList<>();
+
+        try {
+            Process p = Runtime.getRuntime().exec("top -m 1 -d " + delay + " -n 1");
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(
+                    p.getInputStream()));
+
+            for (int i = 0; i < 4; i++) {
+                line = reader.readLine();
+            }
+
+            resultString = line.replaceAll("[%a-zA-Z,]", "");
+            resultString.trim();
+            result = parseCpuLoad(resultString);
+            list.add(resultString);
+
+            while ((line = reader.readLine()) != null) {
+                trimmedString = line.trim();
+                if (!line.isEmpty() && Character.isDigit(trimmedString.charAt(0))) {
+                    resultString2 = trimmedString.replace("%", "");
+                    Log.e("Output ", resultString);
+                    list.add(resultString2);
+                }
+            }
+            Log.e("[Error]", "New read CPU usage " + resultString + " " + result);
+            p.waitFor();
+
+        } catch (Exception e) {
+        }
+        return list;
     }
 
     /**
