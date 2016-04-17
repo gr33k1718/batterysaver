@@ -8,7 +8,6 @@ import android.content.IntentFilter;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.provider.Settings;
-import android.support.annotation.Nullable;
 import android.util.Log;
 
 public class DisplayMonitor {
@@ -22,9 +21,19 @@ public class DisplayMonitor {
                 Settings.System.SCREEN_BRIGHTNESS, 0);
     }
 
+    public void setScreenBrightness(int brightness) {
+        Settings.System.putInt(context.getContentResolver(),
+                Settings.System.SCREEN_BRIGHTNESS, brightness);
+    }
+
     public int getScreenTimeout() {
         return Settings.System.getInt(context.getContentResolver(),
                 Settings.System.SCREEN_OFF_TIMEOUT, 0);
+    }
+
+    public void setScreenTimeout(long timeout) {
+        Settings.System.putLong(context.getContentResolver(),
+                Settings.System.SCREEN_OFF_TIMEOUT, timeout);
     }
 
     public long getInteractionTime() {
@@ -67,12 +76,12 @@ public class DisplayMonitor {
         pref.commit();
     }
 
-    public void restartScreenService(){
+    public void restartScreenService() {
         context.stopService(new Intent(context, ScreenService.class));
         context.startService(new Intent(context, ScreenService.class));
     }
 
-    public static class ScreenService extends Service{
+    public static class ScreenService extends Service {
 
         BroadcastReceiver screenReceiver = new BroadcastReceiver() {
             @Override

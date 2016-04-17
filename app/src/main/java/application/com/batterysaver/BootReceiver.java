@@ -15,7 +15,7 @@ public class BootReceiver extends BroadcastReceiver {
 
         hourlyLogAlarm();
 
-        //weeklyProfileAlarm();
+        weeklyProfileAlarm();
     }
 
     /**
@@ -24,6 +24,7 @@ public class BootReceiver extends BroadcastReceiver {
      */
     private void hourlyLogAlarm() {
         String actionName = "logService";
+        int fiveMinutes = 300000;
 
         Calendar time = Calendar.getInstance();
 
@@ -37,7 +38,7 @@ public class BootReceiver extends BroadcastReceiver {
 
         AlarmManager alarmManager = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
 
-        alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), 300000, p);
+        alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, time.getTimeInMillis(), fiveMinutes, p);
     }
 
     /**
@@ -48,9 +49,8 @@ public class BootReceiver extends BroadcastReceiver {
         String actionName = "weeklyService";
 
         Calendar time = Calendar.getInstance();
-
+        time.set(Calendar.DAY_OF_WEEK, time.get(Calendar.DAY_OF_WEEK) * 7);
         time.set(Calendar.HOUR_OF_DAY, time.get(Calendar.HOUR_OF_DAY) + 1);
-        time.set(Calendar.MINUTE, 30);
 
         Intent logIntent = new Intent(mContext, WeeklyUpdateService.class);
         logIntent.setAction(actionName);

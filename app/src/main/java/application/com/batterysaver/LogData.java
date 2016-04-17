@@ -16,25 +16,25 @@ public class LogData {
     public float cpuLoad;
     public int day;
     public int charging;
-    public double usageScore;
     public String usageType;
+    public int networkUsageTime;
+    public int mobileUsageTime;
 
     public LogData(int day, int period, int charging, int brightness, int batteryLevel,
-                   int predictedBatteryLevel, int timeOut, long networkTraffic,
-                   long mobileTraffic, long interactionTime, float cpuLoad, double usageScore,
-                   String usageType) {
+                   int timeOut, long networkTraffic, long mobileTraffic, long interactionTime,
+                   float cpuLoad, int networkUsageTime, int mobileUsageTime, String usageType) {
         this.day = day;
         this.period = period;
         this.brightness = brightness;
         this.batteryLevel = batteryLevel;
-        this.predictedBatteryLevel = predictedBatteryLevel;
         this.timeOut = timeOut;
         this.networkTraffic = networkTraffic;
         this.mobileTraffic = mobileTraffic;
         this.interactionTime = interactionTime;
         this.cpuLoad = cpuLoad;
         this.charging = charging;
-        this.usageScore = usageScore;
         this.usageType = usageType;
+        this.networkUsageTime = networkUsageTime;
+        this.mobileUsageTime = mobileUsageTime;
     }
 }

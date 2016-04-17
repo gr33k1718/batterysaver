@@ -13,7 +13,6 @@ import android.net.ConnectivityManager;
 import android.net.TrafficStats;
 import android.os.IBinder;
 import android.os.PowerManager;
-import android.support.annotation.Nullable;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 
@@ -21,7 +20,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.Calendar;
 
 public class NetworkMonitor {
     private static final String RX_FILE = "/sys/class/net/wlan0/statistics/rx_bytes";
@@ -121,36 +119,53 @@ public class NetworkMonitor {
         return bytes;
     }
 
-    public static void getUsageTimes(){
-        TelephonyManager telephonyManager = (TelephonyManager)context.getSystemService(Context.TELEPHONY_SERVICE);
-        int mobileDataActivity = telephonyManager.getDataActivity();
+    public static int[] getUsageTimes() {
+        int[] usageTimes = new int[2];
+        usageTimes[0] = pref.getInt("WiFiTotalTimes", 0);
+        usageTimes[1] = pref.getInt("MobileTotalTime", 0);
+        return usageTimes;
+    }
 
+    public static void monitorUsageTimes() {
+        TelephonyManager telephonyManager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+        int mobileDataActivity = telephonyManager.getDataActivity();
+        PowerManager powerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
         long currentWiFiBytes = getWifiTraffic(TX_FILE) + getWifiTraffic(RX_FILE);
 
         long prevTotalBytes = pref.getLong("WiFiTotalBytes", currentWiFiBytes);
 
         pref.putLong("WiFiTotalBytes", currentWiFiBytes);
 
-        if(currentWiFiBytes > prevTotalBytes){
-            int prevWifiTime = pref.getInt("WiFiTotalTimes",0);
+        long totalBytes = currentWiFiBytes - prevTotalBytes;
+        if (totalBytes > 500000 & powerManager.isInteractive()) {
+            int prevWifiTime = pref.getInt("WiFiTotalTimes", 0);
             pref.putInt("WiFiTotalTimes", prevWifiTime + 5);
             Log.e("[Error]", "WiFi time " + prevWifiTime);
         }
 
-        if(mobileDataActivity != 0 && mobileDataActivity != 4){
+        if (mobileDataActivity != 0 && mobileDataActivity != 4 & powerManager.isInteractive()) {
             int prevMobileTime = pref.getInt("MobileTotalTime", 0);
             pref.putInt("MobileTotalTime", prevMobileTime + 5);
             Log.e("[Error]", "Mobile time " + prevMobileTime);
         }
 
-        Log.e("[Error]", "Total Bytes " + (currentWiFiBytes - prevTotalBytes));
+        //Log.e("[Error]", "Total Bytes " + (currentWiFiBytes - prevTotalBytes));
 
         pref.commit();
     }
 
-    public static void clearUsageTimes(){
+    public static void clearUsageTimes() {
         pref.putInt("WiFiTotalTimes", 0);
         pref.putInt("MobileTotalTime", 0);
+    }
+
+    public void activateNetworkMonitor() {
+        if (!isAlive()) {
+            startNetworkMonitor();
+        } else {
+            stopNetworkMonitor();
+            startNetworkMonitor();
+        }
     }
 
     public void startNetworkMonitor() {
@@ -194,6 +209,48 @@ public class NetworkMonitor {
         mNotificationManager.notify(0, mBuilder.build());
     }
 
+    public void activateSyncSetting(int delayMin) {
+
+        int delayMilli = delayMin * 60 * 1000;
+
+        Intent logIntent = new Intent(context, SyncService.class);
+
+        PendingIntent p = PendingIntent.getService(context, 1, logIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+
+        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+
+        alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), delayMilli, p);
+    }
+
+    public static class SyncService extends Service {
+        private PowerManager pm;
+        private PowerManager.WakeLock mWakeLock;
+
+        @Override
+        public void onCreate() {
+            super.onCreate();
+            pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "lock");
+            mWakeLock.acquire();
+
+            boolean masterSyncAutomatically = ContentResolver.getMasterSyncAutomatically();
+            ContentResolver.setMasterSyncAutomatically(!masterSyncAutomatically);
+            Log.e("[Error]", "" + masterSyncAutomatically);
+            stopSelf();
+        }
+
+        @Override
+        public void onDestroy() {
+            super.onDestroy();
+            mWakeLock.release();
+        }
+
+        @Override
+        public IBinder onBind(Intent intent) {
+            return null;
+        }
+    }
+
     private class NetworkRunnable implements Runnable {
         private final long SLEEP_TIME = 5000;
         private long currentTraffic;
@@ -222,48 +279,6 @@ public class NetworkMonitor {
                     Thread.currentThread().interrupt();
                 }
             }
-        }
-    }
-
-    public static void activateSyncSetting(int delayMin){
-
-        int delayMilli = delayMin * 60 * 1000;
-
-        Intent logIntent = new Intent(context, SyncService.class);
-
-        PendingIntent p = PendingIntent.getService(context, 1, logIntent, PendingIntent.FLAG_CANCEL_CURRENT);
-
-        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-
-        alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), delayMilli, p);
-    }
-
-    public static class SyncService extends Service{
-        private PowerManager pm;
-        private PowerManager.WakeLock mWakeLock;
-
-        @Override
-        public void onCreate() {
-            super.onCreate();
-            pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-            mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "lock");
-            mWakeLock.acquire();
-
-            boolean masterSyncAutomatically = ContentResolver.getMasterSyncAutomatically();
-            ContentResolver.setMasterSyncAutomatically(!masterSyncAutomatically);
-            Log.e("[Error]", "" + masterSyncAutomatically);
-            stopSelf();
-        }
-
-        @Override
-        public void onDestroy() {
-            super.onDestroy();
-            mWakeLock.release();
-        }
-
-        @Override
-        public IBinder onBind(Intent intent) {
-            return null;
         }
     }
 }

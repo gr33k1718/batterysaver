@@ -25,7 +25,7 @@ public class WeeklyUpdateService extends Service {
 
         mWakeLock.acquire();
 
-        databaseLogger.copyAndMerge();
+        databaseLogger.copyAndCreate();
     }
 
     @Override

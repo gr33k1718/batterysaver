@@ -82,7 +82,6 @@ public class PreferencesUtil {
     }
 
 
-
     public void remove(String key) {
         prefsEditor.remove(key);
     }

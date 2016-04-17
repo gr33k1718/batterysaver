@@ -1,17 +1,10 @@
 package application.com.batterysaver;
 
 import android.app.Activity;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
-import android.net.NetworkInfo;
-import android.net.wifi.SupplicantState;
-import android.net.wifi.WifiInfo;
-import android.net.wifi.WifiManager;
 import android.os.BatteryManager;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -34,9 +27,9 @@ public class StartActivity extends Activity {
         this.requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.activity_main2);
         lv = (ListView) findViewById(R.id.mylist2);
-        textView = (TextView)findViewById(R.id.textView);
+        textView = (TextView) findViewById(R.id.textView);
 
-        BatteryManager connectivityManager = (BatteryManager)MyApplication.getAppContext().getSystemService(Context.BATTERY_SERVICE);
+        BatteryManager connectivityManager = (BatteryManager) MyApplication.getAppContext().getSystemService(Context.BATTERY_SERVICE);
         //long capacity = connectivityManager.getLongProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER);
         int avgMah = connectivityManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_AVERAGE);
         int mAh = connectivityManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW);

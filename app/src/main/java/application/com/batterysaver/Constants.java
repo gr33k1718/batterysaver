@@ -24,5 +24,8 @@ public class Constants {
     public static final String USAGE_TYPE_STRING = "usageType";
     public static final String LOG_TABLE_NAME_ONE = "logs";
     public static final String LOG_TABLE_NAME_TWO = "logs_two";
+    public static final String NETWORK_USAGE_PREF = "networkUsage";
+    public static final String MOBILE_USAGE_PREF = "mobileUsage";
+
 
 }

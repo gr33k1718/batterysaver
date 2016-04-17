@@ -4,17 +4,13 @@ import android.app.ActivityManager;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
-import android.os.BatteryManager;
 import android.os.IBinder;
 import android.os.PowerManager;
-import android.util.Log;
 
 import java.util.Calendar;
 
 public class LogService extends Service {
+    ActivityManager am;
     private PreferencesUtil prefs = PreferencesUtil.getInstance(this,
             Constants.SYSTEM_CONTEXT_PREFS, Context.MODE_PRIVATE);
     private PowerManager pm;
@@ -29,25 +25,9 @@ public class LogService extends Service {
         pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
         mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "lock");
         mWakeLock.acquire();
+        am = (ActivityManager) this.getSystemService(ACTIVITY_SERVICE);
 
-        //gatherData();
-
-        ActivityManager am = (ActivityManager)this.getSystemService(ACTIVITY_SERVICE);
-        // The first in the list of RunningTasks is always the foreground task.
-        ActivityManager.RunningTaskInfo foregroundTaskInfo = am.getRunningTasks(1).get(0);
-        String foregroundTaskPackageName = foregroundTaskInfo .topActivity.getPackageName();
-        PackageManager pm = this.getPackageManager();
-        PackageInfo foregroundAppPackageInfo = null;
-        try {
-            foregroundAppPackageInfo = pm.getPackageInfo(foregroundTaskPackageName, 0);
-        } catch (PackageManager.NameNotFoundException e) {
-            e.printStackTrace();
-        }
-        String foregroundTaskAppName = foregroundAppPackageInfo.applicationInfo.loadLabel(pm).toString();
-
-        Log.e("[Error]", foregroundTaskAppName);
-
-        logData();
+        hourlyLog();
 
         stopSelf();
     }
@@ -82,37 +62,30 @@ public class LogService extends Service {
 
         int brightness = displayMonitor.getScreenBrightness();
         int timeOut = displayMonitor.getScreenTimeout();
-        long interactionTime =  displayMonitor.getInteractionTime();
+        long interactionTime = displayMonitor.getInteractionTime();
 
         long[] trafficStats = NetworkMonitor.getTrafficStats();
+        int[] usageTimes = NetworkMonitor.getUsageTimes();
         long wifiTraffic = trafficStats[0];
         long mobileTraffic = trafficStats[1];
+        int wifiUsage = usageTimes[0];
+        int mobileUsage = usageTimes[1];
 
         int cpuLoad = cpuMonitor.getTotalCpuLoad();
 
+        double usageScore = Predictor.predictBatteryUsage(wifiTraffic, mobileTraffic, cpuLoad,
+                interactionTime, brightness,
+                wifiUsage, mobileUsage);
 
-        double usageScore = Predictor.milliAmpPerHour(wifiTraffic, mobileTraffic, cpuLoad,
-                interactionTime, brightness);
+        String usageType = usageType(usageScore);
 
-        int predictedConsumption = (int)((usageScore/2550.0)*100);
+        LogData systemContext = new LogData(day, period, isCharging, brightness,
+                batteryLevel, timeOut, wifiTraffic, mobileTraffic,
+                interactionTime, cpuLoad, wifiUsage, mobileUsage, usageType);
 
-        //Log.e("[Error]", "Predicted consumption " + predictedConsumption + " mAh " + Predictor.milliAmpPerHour(wifiTraffic, mobileTraffic, cpuLoad,
-                //interactionTime, brightness));
-
-
-        String usageType = usageType(predictedConsumption);
-
-        LogData systemContext  = new LogData(day, period, isCharging, brightness,
-                batteryLevel, predictedConsumption,timeOut, wifiTraffic, mobileTraffic,
-                interactionTime, cpuLoad, usageScore, usageType);
-
-        //database.clearAllLogs(Constants.LOG_TABLE_NAME_ONE);
-
-        //database.alter();
         database.logStatus(systemContext);
 
         displayMonitor.restartScreenService();
-        //database.copyTable();
     }
 
     /*
@@ -120,9 +93,12 @@ public class LogService extends Service {
      *  to apply and activates the settings suggested.
      *  Setting are applied based on whether the current time
      */
-    /*
+
     private void applySettings() {
         int endTime;
+        Calendar cal = Calendar.getInstance();
+        int day = cal.get(Calendar.DAY_OF_WEEK);
+        int period = cal.get(Calendar.HOUR_OF_DAY);
         SavingsProfile savingsProfile = null;
 
         UsageProfile[] usageProfiles = prefs.getUsageProfiles()[day];
@@ -141,114 +117,59 @@ public class LogService extends Service {
                 }
             }
         }
+        long networkWarningLimit = savingsProfile.getNetworkWarningLimit();
+        int brightness = savingsProfile.getBrightness();
+        long timeout = savingsProfile.getTimeout();
+        int syncTime = savingsProfile.getSyncTime();
+        NetworkMonitor networkMonitor = new NetworkMonitor(networkWarningLimit);
+        CpuMonitor cpuMonitor = new CpuMonitor();
+        DisplayMonitor displayMonitor = new DisplayMonitor();
 
-        NetworkMonitor networkMonitor = new NetworkMonitor(savingsProfile.getNetworkWarningLimit());
+        networkMonitor.activateSyncSetting(syncTime);
 
-        Settings.System.putInt(this.getContentResolver(),
-                Settings.System.SCREEN_BRIGHTNESS, savingsProfile.getBrightness());
-        Settings.System.putLong(this.getContentResolver(),
-                Settings.System.SCREEN_OFF_TIMEOUT, savingsProfile.getTimeout());
+        displayMonitor.setScreenBrightness(brightness);
+        displayMonitor.setScreenTimeout(timeout);
+
+        networkMonitor.activateNetworkMonitor();
 
         if (savingsProfile.isSetCpuMonitor()) {
-            if (!cpuMonitor.isAliveCpuMonitor()) {
-                cpuMonitor.startCpuMonitor();
-            }
+            cpuMonitor.activateNetworkMonitor();
         } else {
             cpuMonitor.stopCpuMonitor();
         }
-
-        if (savingsProfile.isSetNetworkMonitor()) {
-            if (!networkMonitor.isAlive()) {
-                networkMonitor.startNetworkMonitor();
-            }
-        } else {
-            networkMonitor.stopNetworkMonitor();
-        }
     }
-*/
 
-    private void logData(){
+
+    private void hourlyLog() {
         int count = prefs.getInt("Count", 1);
 
-        int prevCpuLoad = prefs.getInt(Constants.CPU_LOAD_PREF_INT, 0);
-
-        int curCpuLoad = Integer.parseInt(CpuMonitor.readCpuUsage(5).get(0));
-
-        double avgLoad = Math.round(movingAvg(count, prevCpuLoad, curCpuLoad));
-
-        int load = (int)avgLoad;
-
-        double a = scale(avgLoad, 50, 10);
-
-        NetworkMonitor.getUsageTimes();
-        Log.e("[Error]", "Current load " + curCpuLoad + " Average load " + avgLoad + " Int average load " + load);
-
         //Log every 60 min: 5 min alarm * 12
-        if(count % 12 == 0){
+        if (count % 12 == 0) {
             gatherData();
-            NetworkMonitor.activateSyncSetting(5);
+
             NetworkMonitor.clearUsageTimes();
-            prefs.putInt(Constants.CPU_LOAD_PREF_INT, curCpuLoad);
+
             prefs.putInt("Count", 1);
-        }
+        } else {
+            CpuMonitor.monitorCpuUsage(count);
+            NetworkMonitor.monitorUsageTimes();
 
-        else{
-            prefs.putInt(Constants.CPU_LOAD_PREF_INT, load);
             prefs.putInt("Count", count + 1);
-
         }
-
         prefs.commit();
     }
 
-    private double movingAvg(int count, int prev, int cur){
-        return ((prev * count) + cur)/(double)(count +1);
-    }
+    private String usageType(double usageScore) {
 
-    private String usageType(double usageScore){
-
-        if(usageScore <= 1){
+        if (usageScore <= 1) {
             return "minimal";
-        }
-        else if (usageScore <= 3){
+        } else if (usageScore <= 3) {
             return "low";
-        }
-        else if(usageScore <= 6){
+        } else if (usageScore <= 6) {
             return "medium";
-        }
-        else{
+        } else {
             return "high";
         }
     }
-
-    private double scale(double valueIn, double baseMax, double limitMax) {
-
-        if(valueIn > baseMax){
-            return limitMax;
-        }
-
-        if(valueIn < 0){
-            return 0;
-        }
-
-        return (valueIn/ baseMax) * limitMax;
-    }
-
-    private double usageScore(double interactionTime, double cpuLoad, double networkTraffic){
-        final double maxLimit = 10;
-        final double maxInteraction = 1800000;
-        final double maxTraffic = 20000000;
-        final double maxCpu = 50;
-        final double maxScore = 30;
-
-        double interaction = scale(interactionTime,  maxInteraction, maxLimit);
-        double cpu = scale(cpuLoad, maxCpu,  maxLimit);
-        double traffic = scale(networkTraffic,  maxTraffic, maxLimit);
-
-        double result = interaction + cpu + traffic;
-
-        return scale(result, maxScore, maxLimit);
-    }
-
 }
 

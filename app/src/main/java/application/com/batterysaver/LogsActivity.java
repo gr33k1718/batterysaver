@@ -88,6 +88,7 @@ public class LogsActivity extends Activity {
     public double scale(final double valueIn, final double baseMin, final double baseMax, final double limitMin, final double limitMax) {
         return ((limitMax - limitMin) * (valueIn - baseMin) / (baseMax - baseMin)) + limitMin;
     }
+
     private ArrayList<Entry> entries(double[] usage) {
         ArrayList<Entry> entries = new ArrayList<>();
         entries.add(new Entry((float) usage[0], 0));
@@ -200,7 +201,7 @@ public class LogsActivity extends Activity {
             @Override
             public boolean accept(File pathname) {
                 //Check if filename is "cpu", followed by a single digit number
-                if(Pattern.matches("cpu[0-9]+", pathname.getName())) {
+                if (Pattern.matches("cpu[0-9]+", pathname.getName())) {
                     return true;
                 }
                 return false;
@@ -214,7 +215,7 @@ public class LogsActivity extends Activity {
             File[] files = dir.listFiles(new CpuFilter());
             //Return the number of cores (virtual CPU devices)
             return files.length;
-        } catch(Exception e) {
+        } catch (Exception e) {
             //Default to return 1 core
             return 1;
         }

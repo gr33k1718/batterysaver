@@ -1,14 +1,17 @@
 package application.com.batterysaver;
 
 import android.util.Log;
+
 public class Predictor {
 
-    public static int predictBatteryUsage(long wifiTraffic, long mobileTraffic, int cpuLoad, long interactionTime, int brightness) {
-        double batteryCapacity = 2550.0;
+    public static int predictBatteryUsage(long wifiTraffic, long mobileTraffic, int cpuLoad,
+                                          long interactionTime, int brightness,
+                                          long wifiUsage, long mobileUsage) {
+        double batteryCapacity = 2550;
 
         double cpu = predictCpuBattery(cpuLoad);
 
-        double network = predictNetworkBattery(wifiTraffic, mobileTraffic);
+        double network = predictNetworkBattery(wifiTraffic, mobileTraffic, wifiUsage, mobileUsage);
 
         double screen = predictInteractionBattery(interactionTime, brightness);
 
@@ -17,11 +20,13 @@ public class Predictor {
         return (int) (Math.round(result * 100));
     }
 
-    public static int milliAmpPerHour(long wifiTraffic, long mobileTraffic, int cpuLoad, long interactionTime, int brightness) {
+    public static int milliAmpPerHour(long wifiTraffic, long mobileTraffic, int cpuLoad,
+                                      long interactionTime, int brightness,
+                                      long wifiUsage, long mobileUsage) {
 
         double cpu = predictCpuBattery(cpuLoad);
 
-        double network = predictNetworkBattery(wifiTraffic, mobileTraffic);
+        double network = predictNetworkBattery(wifiTraffic, mobileTraffic, wifiUsage, mobileUsage);
 
         double screen = predictInteractionBattery(interactionTime, brightness);
 
@@ -33,10 +38,10 @@ public class Predictor {
     }
 
     public static double predictCpuBattery(int cpuLoad) {
-        return 90 * (cpuLoad/100.0);
-        /*
+        //return 90 * (cpuLoad/100.0);
+
         if (cpuLoad <= 2) {
-            return 14;
+            return cpuLoad * 7;
         } else if (cpuLoad <= 25) {
             return 14 + (cpuLoad - 2) * 2.8;
         } else if (cpuLoad <= 50) {
@@ -45,7 +50,8 @@ public class Predictor {
             return 115 + (cpuLoad - 50) * 0.96;
         } else {
             return 140 + (cpuLoad - 75) * 0.5;
-        }*/
+        }
+
     }
 
     public static double predictInteractionBattery(long interactionTime, int brightness) {
@@ -60,17 +66,20 @@ public class Predictor {
         return (mahScreenOn * timeOnPercent) + (mahScreenBrightness * brightPercent) * timeOnPercent;
     }
 
-    public static double predictNetworkBattery(long wifiTraffic, long mobileTraffic) {
+    public static double predictNetworkBattery(long wifiTraffic, long mobileTraffic,
+                                               long wifiUsage, long mobileUsage) {
         long wifiBits = wifiTraffic * 8;
         long mobileBits = mobileTraffic * 8;
         double wifiSpeed = 4500000;
         double mobileSpeed = 1000000;
         double secInHour = 3600;
+        double minInHour = 60;
         double wifiMaxMah = 362;
         double mobileMaxMah = 350;
         double wifiIdleMah = 14;
         double mobileIdleMah = 5;
-
+        double wifiMaxUsageMah = 275;
+        double mobileMaxUsageMah = 150;
 
         double wifiTransferTime = wifiBits / wifiSpeed;
         double mobileTransferTime = mobileBits / mobileSpeed;
@@ -81,10 +90,15 @@ public class Predictor {
         double wifiIdleTime = 1 - timeWifiPercent;
         double mobileIdleTime = 1 - timeMobilePercent;
 
+        double wifiUsageTime = (wifiUsage / minInHour) * wifiMaxUsageMah;
+        double mobileUsageTime = (mobileUsage / minInHour) * mobileMaxUsageMah;
+
         double idleTimeMah = wifiTraffic > mobileTraffic ? (wifiIdleMah * wifiIdleTime) :
                 (mobileIdleMah * mobileIdleTime);
 
-        return (timeWifiPercent * wifiMaxMah) + (timeMobilePercent * mobileMaxMah) + idleTimeMah;
+        return (timeWifiPercent * wifiMaxMah) +
+                (timeMobilePercent * mobileMaxMah)
+                + idleTimeMah + wifiUsageTime + mobileUsageTime;
 
 
     }

@@ -13,14 +13,8 @@ import android.content.pm.PackageManager;
 import android.util.Log;
 
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.RandomAccessFile;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class CpuMonitor {
 
@@ -41,6 +35,48 @@ public class CpuMonitor {
                 + Integer.parseInt(cpuTotal[3]) + Integer.parseInt(cpuTotal[4]);
     }
 
+    public static void monitorCpuUsage(int count) {
+        int prevCpuLoad = pref.getInt(Constants.CPU_LOAD_PREF_INT, 0);
+
+        int curCpuLoad = readCpuUsage(5);
+
+        int load = (int) Math.round(movingAvg(count, prevCpuLoad, curCpuLoad));
+
+        pref.putInt(Constants.CPU_LOAD_PREF_INT, load);
+        pref.commit();
+
+    }
+
+    public static int readCpuUsage(int delay) {
+        String line = "";
+        String resultString = "";
+        int result = 0;
+
+        try {
+            Process p = Runtime.getRuntime().exec("top -m 1 -d " + delay + " -n 1");
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(
+                    p.getInputStream()));
+
+            for (int i = 0; i < 4; i++) {
+                line = reader.readLine();
+            }
+
+            resultString = line.replaceAll("[%a-zA-Z,]", "");
+            resultString.trim();
+            result = parseCpuLoad(resultString);
+
+            p.waitFor();
+
+        } catch (Exception e) {
+        }
+        return result;
+    }
+
+    private static double movingAvg(int count, int prev, int cur) {
+        return ((prev * count) + cur) / (double) (count + 1);
+    }
+
     /**
      * Retrieves the total CPU load from shared preferences.
      *
@@ -48,28 +84,8 @@ public class CpuMonitor {
      */
     public int getTotalCpuLoad() {
 
+        pref.commit();
         return pref.getInt(Constants.CPU_LOAD_PREF_INT, 0);
-    }
-
-    public static float readCpuUsage() {
-        String[] loadAvgs = new String[3];
-        int numCPU = 8;
-        try {
-
-            RandomAccessFile reader = new RandomAccessFile("/proc/loadavg", "r");
-
-            String s = reader.readLine();
-            loadAvgs = s.split(" +");
-
-            reader.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        float result = (Float.parseFloat(loadAvgs[2])/numCPU) * 100;
-        return result;
     }
 
     /**
@@ -92,47 +108,17 @@ public class CpuMonitor {
      *
      * @return whether the thread is active
      */
-    public boolean isAliveCpuMonitor() {
+    public boolean isAlive() {
         return cpuMonitor.isAlive();
     }
 
-    public static ArrayList<String> readCpuUsage(int delay) {
-        String line = "";
-        String resultString = "";
-        int result = 0;
-        String trimmedString;
-        String resultString2;
-        ArrayList<String> list = new ArrayList<>();
-
-        try {
-            Process p = Runtime.getRuntime().exec("top -m 1 -d " + delay + " -n 1");
-
-            BufferedReader reader = new BufferedReader(new InputStreamReader(
-                    p.getInputStream()));
-
-            for (int i = 0; i < 4; i++) {
-                line = reader.readLine();
-            }
-
-            resultString = line.replaceAll("[%a-zA-Z,]", "");
-            resultString.trim();
-            result = parseCpuLoad(resultString);
-            list.add(resultString);
-
-            while ((line = reader.readLine()) != null) {
-                trimmedString = line.trim();
-                if (!line.isEmpty() && Character.isDigit(trimmedString.charAt(0))) {
-                    resultString2 = trimmedString.replace("%", "");
-                    Log.e("Output ", resultString);
-                    list.add(resultString2);
-                }
-            }
-            Log.e("[Error]", "New read CPU usage " + resultString + " " + result);
-            p.waitFor();
-
-        } catch (Exception e) {
+    public void activateNetworkMonitor() {
+        if (!isAlive()) {
+            startCpuMonitor();
+        } else {
+            stopCpuMonitor();
+            startCpuMonitor();
         }
-        return list;
     }
 
     /**
@@ -147,7 +133,7 @@ public class CpuMonitor {
         ArrayList<String> list = new ArrayList<>();
 
         try {
-            Process p = Runtime.getRuntime().exec("top -m 5 -d 420 -n 1");
+            Process p = Runtime.getRuntime().exec("top -m 5 -d 5 -n 1");
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(
                     p.getInputStream()));
