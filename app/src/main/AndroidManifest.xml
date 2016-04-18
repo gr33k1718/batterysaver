@@ -31,8 +31,6 @@
 
         <activity android:name=".LogsActivity" />
 
-        <activity android:name=".WeeklyStatsActivity" />
-
         <receiver android:name=".BootReceiver">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

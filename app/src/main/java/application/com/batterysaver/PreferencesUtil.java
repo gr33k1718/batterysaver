@@ -6,6 +6,9 @@ import android.os.Build;
 
 import com.google.gson.Gson;
 
+/**
+ * Helper class for saving data into shared preferences
+ */
 public class PreferencesUtil {
 
     private static PreferencesUtil sInstance;
@@ -29,24 +32,12 @@ public class PreferencesUtil {
         return sInstance;
     }
 
-    public boolean getBoolean(String key, boolean defValue) {
-        return prefs.getBoolean(key, defValue);
-    }
-
     public int getInt(String key, int defValue) {
         return prefs.getInt(key, defValue);
     }
 
     public long getLong(String key, long defValue) {
         return prefs.getLong(key, defValue);
-    }
-
-    public String getString(String key, String defValue) {
-        return prefs.getString(key, defValue);
-    }
-
-    public String getString(String key) {
-        return prefs.getString(key, "");
     }
 
     public UsageProfile[][] getUsageProfiles() {
@@ -58,20 +49,12 @@ public class PreferencesUtil {
         return usageProfiles;
     }
 
-    public void putBoolean(String key, boolean value) {
-        prefsEditor.putBoolean(key, value);
-    }
-
     public void putInt(String key, int value) {
         prefsEditor.putInt(key, value);
     }
 
     public void putLong(String key, long value) {
         prefsEditor.putLong(key, value);
-    }
-
-    public void putString(String key, String value) {
-        prefsEditor.putString(key, value);
     }
 
     public void putUsageProfiles(UsageProfile[][] usageProfiles) {
@@ -87,10 +70,10 @@ public class PreferencesUtil {
     }
 
     public void commit() {
-        /*if (mUseApply)
+        if (mUseApply)
             prefsEditor.apply();
 
-        else*/
+        else
         prefsEditor.commit();
     }
 }

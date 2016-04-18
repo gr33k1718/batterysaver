@@ -10,6 +10,10 @@ import android.util.Log;
 import java.util.LinkedList;
 import java.util.List;
 
+/**
+ * The DatabaseLogger is responsible for all database related activity.
+ *
+ */
 
 public class DatabaseLogger {
     private static final String DATABASE_NAME = "logs.db";
@@ -61,7 +65,8 @@ public class DatabaseLogger {
     }
 
     /**
-     *
+     * Creates the users usages patterns and resets data in the current table
+     * copying the relevant rows over to the backup table
      */
     public void copyAndCreate() {
 
@@ -90,8 +95,9 @@ public class DatabaseLogger {
     }
 
     /**
-     * @param day
-     * @return
+     * Retrieves all data from table one within the database
+     * @param day the week day
+     * @return list of all data within table one
      */
     public List<String> getAllLogs(int day) {
         List<String> logs = new LinkedList<>();
@@ -126,19 +132,33 @@ public class DatabaseLogger {
     }
 
     /**
-     * @return
+     * Assigns a usage type to the value provided
+     * @param usageScore the value to be categorised
+     * @return the classification given
+     */
+    private String usageType(double usageScore) {
+
+        if (usageScore <= 1) {
+            return "minimal";
+        } else if (usageScore <= 3) {
+            return "low";
+        } else if (usageScore <= 6) {
+            return "medium";
+        } else {
+            return "high";
+        }
+    }
+
+    /**
+     * Analyses the data stored and creates usage patterns over the time periods.
+     * Stores data within shared preferences
+     * @return the collection of usage patterns over the week
      */
     public UsageProfile[][] getUsagePatterns() {
-        Log.d("[hi]", "profiles");
-
         UsageProfile prevUsage = null;
         UsageProfile currentUsage;
 
-        int totalBatteryUsed = 0;
-
-        boolean first = true;
-
-        UsageProfile[][] group = new UsageProfile[8][24];
+        UsageProfile[][] weeklyUsage = new UsageProfile[7][24];
 
         openDBs();
 
@@ -146,8 +166,6 @@ public class DatabaseLogger {
 
         if (cursor.moveToFirst()) {
             do {
-                int singlePeriod;
-                int multiPeriod;
                 int day = cursor.getInt(1);
                 int period = cursor.getInt(2);
                 int charging = cursor.getInt(4);
@@ -163,31 +181,15 @@ public class DatabaseLogger {
                         charging, brightness, timeout, totalTraffic, totalNetUsageTime,
                         screen, cpuLoad, usageType);
 
-                //Determine usage type/s
-
                 if (prevUsage != null) {
 
                     if (currentUsage.equals(prevUsage)) {
-                        if (first) {
-                            totalBatteryUsed = prevUsage.getBatteryLevel();
-                            first = false;
-                        }
+
                         prevUsage = currentUsage.merge(prevUsage);
 
                     } else {
-                        //If phone was charging over the period return 0
-                        if (prevUsage.getEnd() - prevUsage.getStart() > 1) {
-                            multiPeriod = totalBatteryUsed - currentUsage.getBatteryLevel();
-                            prevUsage.setBatteryUsed(multiPeriod > 0 ? multiPeriod : 0);
-                        } else {
-                            singlePeriod = prevUsage.getBatteryLevel() - currentUsage.getBatteryLevel();
-                            prevUsage.setBatteryUsed(singlePeriod > 0 ? singlePeriod : 0);
-                        }
-
-                        Log.d("[hi]", "\n\nPrev " + prevUsage + " " + totalBatteryUsed);
-                        group[prevUsage.getDay()][prevUsage.getStart()] = prevUsage;
+                        weeklyUsage[prevUsage.getDay() -1][prevUsage.getStart()] = prevUsage;
                         prevUsage = currentUsage;
-                        first = true;
                     }
                 } else {
                     prevUsage = currentUsage;
@@ -198,28 +200,20 @@ public class DatabaseLogger {
 
         cursor.close();
 
-        prefs.putUsageProfiles(group);
+        prefs.putUsageProfiles(weeklyUsage);
         prefs.commit();
 
-        return group;
+        return weeklyUsage;
     }
 
-    public void alter() {
-        openDBs();
-        String DATABASE_ALTER_TEAM_TO_V3 = "ALTER TABLE "
-                + Constants.LOG_TABLE_NAME_ONE + " ADD COLUMN " + Constants.MOBILE_USAGE_PREF + " TEXT;";
-        String DATABASE_ALTER_TEAM_TO_V4 = "ALTER TABLE "
-                + Constants.LOG_TABLE_NAME_ONE + " ADD COLUMN " + Constants.NETWORK_USAGE_PREF + " REAL;";
-
-        wdb.execSQL(DATABASE_ALTER_TEAM_TO_V3);
-        wdb.execSQL(DATABASE_ALTER_TEAM_TO_V4);
-
-    }
 
     /**
-     * @param prev
-     * @param current
-     * @return
+     * This weights the user data such that past data is considered more
+     * relevant than current data
+     * @param prev previous data point
+     * @param current current data point
+     * @param weight the weighting value
+     * @return the weighted data
      */
     private long getWeightedAverage(long prev, long current, float weight) {
         double weightPrev = 1 + (weight / 100);
@@ -229,7 +223,9 @@ public class DatabaseLogger {
     }
 
     /**
-     * @param info
+     * Weights the current data with the previous data and inserts the result into the
+     * database.  Also assigns a usage type based on values provided.
+     * @param info the users data
      */
     public void logStatus(LogData info) {
         int period = info.period;
@@ -237,6 +233,8 @@ public class DatabaseLogger {
         long prevScreen = 0;
         long prevNetworkTraffic = 0;
         long prevMobileTraffic = 0;
+        long prevNetworkUsage = 0;
+        long prevMobileUsage = 0;
         int prevCpuLoad = 0;
 
         openDBs();
@@ -246,12 +244,28 @@ public class DatabaseLogger {
         if (prevCursor != null && prevCursor.getCount() > 0) {
 
             prevCursor.moveToFirst();
-            prevScreen = prevCursor.getLong(7);
-            prevNetworkTraffic = prevCursor.getLong(9);
-            prevMobileTraffic = prevCursor.getLong(10);
-            prevCpuLoad = prevCursor.getInt(8);
+            prevScreen = prevCursor.getLong(4);
+            prevNetworkTraffic = prevCursor.getLong(6);
+            prevMobileTraffic = prevCursor.getLong(7);
+            prevCpuLoad = prevCursor.getInt(5);
+            prevNetworkUsage = prevCursor.getInt(8);
+            prevMobileUsage = prevCursor.getInt(9);
 
         }
+
+        long interactionTime = getWeightedAverage(prevScreen, info.interactionTime, 30);
+        long cpuLoad = getWeightedAverage(prevCpuLoad, (int) info.cpuLoad, 30);
+        long networkTraffic = getWeightedAverage(prevNetworkTraffic, info.networkTraffic, 30);
+        long mobileTraffic = getWeightedAverage(prevMobileTraffic, info.mobileTraffic, 30);
+        long networkUsage = getWeightedAverage(prevNetworkUsage, info.networkUsageTime, 30);
+        long mobileUsage = getWeightedAverage(prevMobileUsage, info.mobileUsageTime, 30);
+
+        double usageScore = Predictor.predictBatteryUsage(networkTraffic,
+                mobileTraffic, (int) cpuLoad,
+                interactionTime, info.brightness,
+               networkUsage, mobileUsage);
+
+        String usageType = usageType(usageScore);
 
         try {
 
@@ -262,25 +276,24 @@ public class DatabaseLogger {
                     + info.charging + " ,"
                     + info.brightness + " ,"
                     + info.timeOut + " ,"
-                    + getWeightedAverage(prevScreen, info.interactionTime, 30) + " ,"
-                    + getWeightedAverage(prevCpuLoad, (int) info.cpuLoad, 30) + " ,"
-                    + getWeightedAverage(prevNetworkTraffic, info.networkTraffic, 30) + " ,"
-                    + getWeightedAverage(prevMobileTraffic, info.mobileTraffic, 30)
-                    + info.usageScore + " ,"
-                    + "'" + info.usageType + "' ,"
-                    + info.predictedBatteryLevel
+                    + interactionTime + " ,"
+                    + cpuLoad + " ,"
+                    + networkTraffic + " ,"
+                    + mobileTraffic + " ,"
+                    + networkUsage + " ,"
+                    + mobileUsage  + " ,"
+                    + usageType
                     + ")");
 
             close();
         } catch (Exception e) {
             Log.e("[Error]", e.toString());
         }
-
-
     }
 
     /**
-     * @param id
+     * Removes a row for the database
+     * @param id the id of the row
      */
     public void deleteLog(String id) {
 
@@ -294,17 +307,25 @@ public class DatabaseLogger {
     }
 
     /**
-     * @param table
+     * Clear all data in the given table
+     * @param table the name of the table
      */
     public void clearAllLogs(String table) {
         mSQLOpenHelper.reset(table);
     }
 
+    /**
+     * This class is used to create the database object which handles all database related calls.
+     */
     private static class SQLOpenHelper extends SQLiteOpenHelper {
         public SQLOpenHelper(Context context) {
             super(context, DATABASE_NAME, null, DATABASE_VERSION);
         }
 
+        /**
+         * Table creation statement for the main database table
+         * @return the SQL create table statement
+         */
         private String createTable() {
             return "CREATE TABLE IF NOT EXISTS " + Constants.LOG_TABLE_NAME_ONE + " ("
                     + KEY_ID + " INTEGER PRIMARY KEY,"
@@ -324,6 +345,10 @@ public class DatabaseLogger {
                     + ");";
         }
 
+        /**
+         * Database creation statement for the backup table
+         * @return the SQL create table statement
+         */
         private String createBackupTable() {
             return "CREATE TABLE IF NOT EXISTS " + Constants.LOG_TABLE_NAME_TWO + " ("
                     + KEY_ID + " INTEGER PRIMARY KEY,"
@@ -339,29 +364,29 @@ public class DatabaseLogger {
         }
 
         /**
-         * @param db
+         * Creates the tables for the given database for the given database
+         * @param db the database
          */
         @Override
         public void onCreate(SQLiteDatabase db) {
-            Log.e("[Error]", "Created");
             db.execSQL(createTable());
             db.execSQL(createBackupTable());
         }
 
         /**
-         * @param db
-         * @param oldVersion
-         * @param newVersion
+         * @param db the database
+         * @param oldVersion the old database version
+         * @param newVersion the new database version
          */
         @Override
         public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-
             db.execSQL(createTable());
             db.execSQL(createBackupTable());
         }
 
         /**
-         * @param table
+         * Remakes the the database table
+         * @param table the name of the table
          */
         public void reset(String table) {
             SQLiteDatabase db = getWritableDatabase();

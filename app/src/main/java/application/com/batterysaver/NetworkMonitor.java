@@ -223,26 +223,33 @@ public class NetworkMonitor {
     }
 
     public static class SyncService extends Service {
-        private PowerManager pm;
-        private PowerManager.WakeLock mWakeLock;
 
         @Override
         public void onCreate() {
             super.onCreate();
-            pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-            mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "lock");
-            mWakeLock.acquire();
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    int SLEEP_TIME = 300000;
 
-            boolean masterSyncAutomatically = ContentResolver.getMasterSyncAutomatically();
-            ContentResolver.setMasterSyncAutomatically(!masterSyncAutomatically);
-            Log.e("[Error]", "" + masterSyncAutomatically);
+                    ContentResolver.setMasterSyncAutomatically(true);
+
+                    try {
+                        Thread.sleep(SLEEP_TIME);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    ContentResolver.setMasterSyncAutomatically(false);
+
+                }
+            });
             stopSelf();
         }
 
         @Override
         public void onDestroy() {
             super.onDestroy();
-            mWakeLock.release();
         }
 
         @Override
@@ -252,7 +259,7 @@ public class NetworkMonitor {
     }
 
     private class NetworkRunnable implements Runnable {
-        private final long SLEEP_TIME = 5000;
+        private final long SLEEP_TIME = 300000;
         private long currentTraffic;
         private long currentTotalBytes;
 

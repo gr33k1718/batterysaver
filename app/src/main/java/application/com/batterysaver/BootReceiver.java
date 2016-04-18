@@ -8,6 +8,11 @@ import android.content.Intent;
 
 import java.util.Calendar;
 
+/**
+ * The BootReceiver is responsible for the scheduling of both the collection
+ * of users data and the weekly usage profiles generation, reset
+ * and transfer of data to the backup table
+ */
 public class BootReceiver extends BroadcastReceiver {
     private Context mContext = MyApplication.getAppContext();
 

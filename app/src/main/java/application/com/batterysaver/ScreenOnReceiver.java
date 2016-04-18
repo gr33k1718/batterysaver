@@ -5,6 +5,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
+/**
+ * The ScreenOnReceiver class is responsible for the listening and calculation of the screen
+ * interaction time
+ */
 public class ScreenOnReceiver extends BroadcastReceiver {
 
     private Context context = MyApplication.getAppContext();

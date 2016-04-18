@@ -6,6 +6,10 @@ import android.content.Intent;
 import android.os.IBinder;
 import android.os.PowerManager;
 
+/**
+ * The WeeklyUpdateService is responsible the creation, copying of data  to the backup table
+ * and the resetting on the current table for a new weeks data.  This happens on a weekly basis
+ */
 public class WeeklyUpdateService extends Service {
     PowerManager pm;
     PowerManager.WakeLock mWakeLock;

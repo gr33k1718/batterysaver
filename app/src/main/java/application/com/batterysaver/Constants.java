@@ -1,5 +1,9 @@
 package application.com.batterysaver;
 
+
+/**
+ * The Constants class hold static string values used throughout the application
+ */
 public class Constants {
     public static final String SYSTEM_CONTEXT_PREFS = "systemContext";
     public static final String NETWORK_PREFS = "NETWORK_PREFS";
@@ -18,9 +22,7 @@ public class Constants {
     public static final String CPU_LOAD_PREF = "cpuLoad";
     public static final String CPU_LOAD_PREF_INT = "cpuLoadInt";
     public static final String CPU_LOAD_PREF_FLOAT = "cpuLoadDouble";
-    public static final String PREDICTED_BATTERY_USAGE = "batterPredicted";
     public static final String IS_CHARGING_PREF = "isCHarging";
-    public static final String USAGE_TYPE_DOUBLE = "sageTypeDouble";
     public static final String USAGE_TYPE_STRING = "usageType";
     public static final String LOG_TABLE_NAME_ONE = "logs";
     public static final String LOG_TABLE_NAME_TWO = "logs_two";

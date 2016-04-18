@@ -9,6 +9,10 @@ import android.os.PowerManager;
 
 import java.util.Calendar;
 
+/**
+ * The LogService is responsible for collection of user data at specific intervals. Also
+ * handles the activation of the setting provided by the power savings profiles
+ */
 public class LogService extends Service {
     ActivityManager am;
     private PreferencesUtil prefs = PreferencesUtil.getInstance(this,
@@ -21,7 +25,6 @@ public class LogService extends Service {
     public void onCreate() {
         super.onCreate();
 
-        //Ensures the CPU is kept awake while the screen is off
         pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
         mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "lock");
         mWakeLock.acquire();
@@ -45,14 +48,18 @@ public class LogService extends Service {
         return null;
     }
 
-    /*
-     *  Gathers the context information related to the user and stores within the database.
+    /**
+     * Gets all the data from the various sub components of the system and stores them into
+     * the database. Activates the setting provided from the savings profiles and restarts
+     * the screen interaction time service.
      */
     public void gatherData() {
         DatabaseLogger database = new DatabaseLogger(this);
         CpuMonitor cpuMonitor = new CpuMonitor();
         DisplayMonitor displayMonitor = new DisplayMonitor();
         SystemMonitor systemMonitor = new SystemMonitor();
+
+        applySettings();
 
         int day = systemMonitor.getDay();
         int period = systemMonitor.getPeriod();
@@ -73,27 +80,19 @@ public class LogService extends Service {
 
         int cpuLoad = cpuMonitor.getTotalCpuLoad();
 
-        double usageScore = Predictor.predictBatteryUsage(wifiTraffic, mobileTraffic, cpuLoad,
-                interactionTime, brightness,
-                wifiUsage, mobileUsage);
-
-        String usageType = usageType(usageScore);
-
         LogData systemContext = new LogData(day, period, isCharging, brightness,
                 batteryLevel, timeOut, wifiTraffic, mobileTraffic,
-                interactionTime, cpuLoad, wifiUsage, mobileUsage, usageType);
+                interactionTime, cpuLoad, wifiUsage, mobileUsage);
 
         database.logStatus(systemContext);
 
         displayMonitor.restartScreenService();
     }
 
-    /*
-     *  Determines the usage profile for the given time of the day. Calculates the the settings
-     *  to apply and activates the settings suggested.
-     *  Setting are applied based on whether the current time
+    /**
+     * For the day and time given activates the setting provided by the savings profile.
+     * Will just exit if no profile exists.
      */
-
     private void applySettings() {
         int endTime;
         Calendar cal = Calendar.getInstance();
@@ -117,6 +116,11 @@ public class LogService extends Service {
                 }
             }
         }
+
+        if(savingsProfile == null){
+            return;
+        }
+
         long networkWarningLimit = savingsProfile.getNetworkWarningLimit();
         int brightness = savingsProfile.getBrightness();
         long timeout = savingsProfile.getTimeout();
@@ -139,7 +143,10 @@ public class LogService extends Service {
         }
     }
 
-
+    /**
+     * Reads and stores the users CPU load and data network usage times over 5 min periods.
+     * Logs the total usage every 1 hour
+     */
     private void hourlyLog() {
         int count = prefs.getInt("Count", 1);
 
@@ -159,17 +166,5 @@ public class LogService extends Service {
         prefs.commit();
     }
 
-    private String usageType(double usageScore) {
-
-        if (usageScore <= 1) {
-            return "minimal";
-        } else if (usageScore <= 3) {
-            return "low";
-        } else if (usageScore <= 6) {
-            return "medium";
-        } else {
-            return "high";
-        }
-    }
 }
 

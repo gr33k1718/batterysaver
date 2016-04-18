@@ -15,6 +15,10 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 
+/**
+ * The start activity displayed when the user first opens the application. Displays a menu
+ * split by day of the week
+ */
 public class StartActivity extends Activity {
     private ListView lv;
     private TextView textView;
@@ -28,11 +32,6 @@ public class StartActivity extends Activity {
         setContentView(R.layout.activity_main2);
         lv = (ListView) findViewById(R.id.mylist2);
         textView = (TextView) findViewById(R.id.textView);
-
-        BatteryManager connectivityManager = (BatteryManager) MyApplication.getAppContext().getSystemService(Context.BATTERY_SERVICE);
-        //long capacity = connectivityManager.getLongProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER);
-        int avgMah = connectivityManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_AVERAGE);
-        int mAh = connectivityManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW);
 
         database = new DatabaseLogger(this);
 
@@ -60,23 +59,25 @@ public class StartActivity extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
+    /**
+     * Gets the data associated with the day clicked
+     */
     public void viewData() {
         lv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
 
             @Override
             public void onItemClick(AdapterView<?> parent, View view, final int position, final long id) {
-                if (position == 0) {
-                    Intent myIntent = new Intent(StartActivity.this, WeeklyStatsActivity.class);
-                    StartActivity.this.startActivity(myIntent);
-                } else {
                     Intent myIntent = new Intent(StartActivity.this, LogsActivity.class);
                     myIntent.putExtra("key", position - 1);
                     StartActivity.this.startActivity(myIntent);
-                }
+
             }
         });
     }
 
+    /**
+     * Sets up the list of days
+     */
     private void setupAdapter() {
 
         listAdapter = new Adapter(this, R.layout.list_item, menu(), false);
@@ -84,9 +85,12 @@ public class StartActivity extends Activity {
         lv.setAdapter(listAdapter);
     }
 
+    /**
+     * Grabs the days of the week
+     * @return the list of days
+     */
     private ArrayList<String> menu() {
         ArrayList<String> menu = new ArrayList<>();
-        menu.add("Weekly");
         menu.add("Sunday");
         menu.add("Monday");
         menu.add("Tuesday");

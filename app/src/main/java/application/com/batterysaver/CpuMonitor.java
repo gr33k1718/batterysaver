@@ -232,8 +232,8 @@ public class CpuMonitor {
     }
 
     private class CpuRunnable implements Runnable {
-        private final int MAX_LOAD = 3;
-        private final long SLEEP_TIME = 600000;
+        private final int MAX_LOAD = 10;
+        private final long SLEEP_TIME = 300000;
         private String highUsageApps = "";
         private String[] processInfo;
         private String appName;
