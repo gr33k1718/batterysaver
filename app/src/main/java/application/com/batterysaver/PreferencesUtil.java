@@ -74,6 +74,6 @@ public class PreferencesUtil {
             prefsEditor.apply();
 
         else
-        prefsEditor.commit();
+            prefsEditor.commit();
     }
 }

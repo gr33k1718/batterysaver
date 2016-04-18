@@ -12,7 +12,6 @@ import java.util.List;
 
 /**
  * The DatabaseLogger is responsible for all database related activity.
- *
  */
 
 public class DatabaseLogger {
@@ -96,6 +95,7 @@ public class DatabaseLogger {
 
     /**
      * Retrieves all data from table one within the database
+     *
      * @param day the week day
      * @return list of all data within table one
      */
@@ -133,6 +133,7 @@ public class DatabaseLogger {
 
     /**
      * Assigns a usage type to the value provided
+     *
      * @param usageScore the value to be categorised
      * @return the classification given
      */
@@ -152,6 +153,7 @@ public class DatabaseLogger {
     /**
      * Analyses the data stored and creates usage patterns over the time periods.
      * Stores data within shared preferences
+     *
      * @return the collection of usage patterns over the week
      */
     public UsageProfile[][] getUsagePatterns() {
@@ -188,7 +190,7 @@ public class DatabaseLogger {
                         prevUsage = currentUsage.merge(prevUsage);
 
                     } else {
-                        weeklyUsage[prevUsage.getDay() -1][prevUsage.getStart()] = prevUsage;
+                        weeklyUsage[prevUsage.getDay() - 1][prevUsage.getStart()] = prevUsage;
                         prevUsage = currentUsage;
                     }
                 } else {
@@ -210,9 +212,10 @@ public class DatabaseLogger {
     /**
      * This weights the user data such that past data is considered more
      * relevant than current data
-     * @param prev previous data point
+     *
+     * @param prev    previous data point
      * @param current current data point
-     * @param weight the weighting value
+     * @param weight  the weighting value
      * @return the weighted data
      */
     private long getWeightedAverage(long prev, long current, float weight) {
@@ -225,6 +228,7 @@ public class DatabaseLogger {
     /**
      * Weights the current data with the previous data and inserts the result into the
      * database.  Also assigns a usage type based on values provided.
+     *
      * @param info the users data
      */
     public void logStatus(LogData info) {
@@ -263,7 +267,7 @@ public class DatabaseLogger {
         double usageScore = Predictor.predictBatteryUsage(networkTraffic,
                 mobileTraffic, (int) cpuLoad,
                 interactionTime, info.brightness,
-               networkUsage, mobileUsage);
+                networkUsage, mobileUsage);
 
         String usageType = usageType(usageScore);
 
@@ -281,7 +285,7 @@ public class DatabaseLogger {
                     + networkTraffic + " ,"
                     + mobileTraffic + " ,"
                     + networkUsage + " ,"
-                    + mobileUsage  + " ,"
+                    + mobileUsage + " ,"
                     + usageType
                     + ")");
 
@@ -293,6 +297,7 @@ public class DatabaseLogger {
 
     /**
      * Removes a row for the database
+     *
      * @param id the id of the row
      */
     public void deleteLog(String id) {
@@ -308,6 +313,7 @@ public class DatabaseLogger {
 
     /**
      * Clear all data in the given table
+     *
      * @param table the name of the table
      */
     public void clearAllLogs(String table) {
@@ -324,6 +330,7 @@ public class DatabaseLogger {
 
         /**
          * Table creation statement for the main database table
+         *
          * @return the SQL create table statement
          */
         private String createTable() {
@@ -347,6 +354,7 @@ public class DatabaseLogger {
 
         /**
          * Database creation statement for the backup table
+         *
          * @return the SQL create table statement
          */
         private String createBackupTable() {
@@ -365,6 +373,7 @@ public class DatabaseLogger {
 
         /**
          * Creates the tables for the given database for the given database
+         *
          * @param db the database
          */
         @Override
@@ -374,7 +383,7 @@ public class DatabaseLogger {
         }
 
         /**
-         * @param db the database
+         * @param db         the database
          * @param oldVersion the old database version
          * @param newVersion the new database version
          */
@@ -386,6 +395,7 @@ public class DatabaseLogger {
 
         /**
          * Remakes the the database table
+         *
          * @param table the name of the table
          */
         public void reset(String table) {

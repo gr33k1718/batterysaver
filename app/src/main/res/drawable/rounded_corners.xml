@@ -1,8 +1,16 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:bottom="1dp" android:left="1dp" android:right="1dp" android:top="1dp">
+    <item
+        android:bottom="1dp"
+        android:left="1dp"
+        android:right="1dp"
+        android:top="1dp">
         <shape android:shape="rectangle">
-            <solid android:color="#80CBC4"/>
-            <corners android:bottomRightRadius="12dp" android:bottomLeftRadius="12dp"    android:topLeftRadius="12dp" android:topRightRadius="12dp"/>
+            <solid android:color="#80CBC4" />
+            <corners
+                android:bottomLeftRadius="12dp"
+                android:bottomRightRadius="12dp"
+                android:topLeftRadius="12dp"
+                android:topRightRadius="12dp" />
         </shape>
     </item>
 </layer-list>

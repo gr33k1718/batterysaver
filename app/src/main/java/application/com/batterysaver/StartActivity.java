@@ -1,9 +1,7 @@
 package application.com.batterysaver;
 
 import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
-import android.os.BatteryManager;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -67,9 +65,9 @@ public class StartActivity extends Activity {
 
             @Override
             public void onItemClick(AdapterView<?> parent, View view, final int position, final long id) {
-                    Intent myIntent = new Intent(StartActivity.this, LogsActivity.class);
-                    myIntent.putExtra("key", position - 1);
-                    StartActivity.this.startActivity(myIntent);
+                Intent myIntent = new Intent(StartActivity.this, LogsActivity.class);
+                myIntent.putExtra("key", position - 1);
+                StartActivity.this.startActivity(myIntent);
 
             }
         });
@@ -87,6 +85,7 @@ public class StartActivity extends Activity {
 
     /**
      * Grabs the days of the week
+     *
      * @return the list of days
      */
     private ArrayList<String> menu() {

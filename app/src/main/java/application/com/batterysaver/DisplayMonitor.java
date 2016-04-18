@@ -21,6 +21,7 @@ public class DisplayMonitor {
 
     /**
      * Gets the current screen brightness
+     *
      * @return the brightness value
      */
     public int getScreenBrightness() {
@@ -30,6 +31,7 @@ public class DisplayMonitor {
 
     /**
      * Sets a brightness value
+     *
      * @param brightness the brightness value
      */
     public void setScreenBrightness(int brightness) {
@@ -39,6 +41,7 @@ public class DisplayMonitor {
 
     /**
      * Gets the current screen timeout value
+     *
      * @return the timeout value
      */
     public int getScreenTimeout() {
@@ -48,6 +51,7 @@ public class DisplayMonitor {
 
     /**
      * Sets the screen timeout value
+     *
      * @param timeout the timeout value
      */
     public void setScreenTimeout(long timeout) {
@@ -58,6 +62,7 @@ public class DisplayMonitor {
     /**
      * Gets the current interaction time. If the screen is on when this data is requested
      * uses the current system time as an end point. Stores the dat within shared preferences
+     *
      * @return the interaction time
      */
     public long getInteractionTime() {
@@ -80,6 +85,7 @@ public class DisplayMonitor {
 
     /**
      * Stores in shared preferences the given time
+     *
      * @param time the time to save
      * @param type the type of time
      */
@@ -94,6 +100,7 @@ public class DisplayMonitor {
 
     /**
      * Fetches from shared preferences the requested time
+     *
      * @param type the type of time requested
      * @return the time the requested
      */

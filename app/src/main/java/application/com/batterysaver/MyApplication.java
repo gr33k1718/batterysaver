@@ -1,7 +1,6 @@
 package application.com.batterysaver;
 
 import android.app.Application;
-import android.content.ContentResolver;
 import android.content.Context;
 
 /**
@@ -13,6 +12,7 @@ public class MyApplication extends Application {
 
     /**
      * Grabs the application context
+     *
      * @return the application context
      */
     public static Context getAppContext() {

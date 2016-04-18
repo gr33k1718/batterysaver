@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.BatteryManager;
+
 import java.util.Calendar;
 
 /**
@@ -17,6 +18,7 @@ public class SystemMonitor {
 
     /**
      * Gets the current day
+     *
      * @return the day of the week
      */
     public int getDay() {
@@ -25,6 +27,7 @@ public class SystemMonitor {
 
     /**
      * get the hour of the day
+     *
      * @return the hour of the day
      */
     public int getPeriod() {
@@ -33,6 +36,7 @@ public class SystemMonitor {
 
     /**
      * Get the battery level percentage
+     *
      * @return the battery level percentage
      */
     public int getBatteryLevel() {
@@ -41,6 +45,7 @@ public class SystemMonitor {
 
     /**
      * Check whether the phone is charging
+     *
      * @return the charging status
      */
     public int isCharging() {

@@ -21,18 +21,17 @@ public class UsageProfile {
     private int networkUsageTime;
 
     /**
-     *
-     * @param day the day of the week
-     * @param start the start time of the profile
-     * @param end the end time of the profile
-     * @param charging whether the device was charging
-     * @param brightness the screen brightness
-     * @param timeout the screen timeout
-     * @param networkUsage the Wi-Fi traffic
+     * @param day              the day of the week
+     * @param start            the start time of the profile
+     * @param end              the end time of the profile
+     * @param charging         whether the device was charging
+     * @param brightness       the screen brightness
+     * @param timeout          the screen timeout
+     * @param networkUsage     the Wi-Fi traffic
      * @param networkUsageTIme the Wi-Fi user interaction time
-     * @param interactionTime the screen interaction time
-     * @param cpu the CPU load
-     * @param usageType the type of usage
+     * @param interactionTime  the screen interaction time
+     * @param cpu              the CPU load
+     * @param usageType        the type of usage
      */
     public UsageProfile(int day, int start, int end, int charging, int brightness, long timeout,
                         long networkUsage, int networkUsageTIme, long interactionTime,
@@ -58,6 +57,7 @@ public class UsageProfile {
 
     /**
      * Gets the Wi-Fi interaction time
+     *
      * @return the Wi-Fi interaction time
      */
     public int getNetworkUsageTime() {
@@ -66,6 +66,7 @@ public class UsageProfile {
 
     /**
      * Gets the CPU load
+     *
      * @return the CPU load
      */
     public float getCpu() {
@@ -74,6 +75,7 @@ public class UsageProfile {
 
     /**
      * Gets the interaction time
+     *
      * @return the interaction time
      */
     public long getInteractionTime() {
@@ -82,6 +84,7 @@ public class UsageProfile {
 
     /**
      * Get the usage type
+     *
      * @return the usage type
      */
     public String getUsageType() {
@@ -90,6 +93,7 @@ public class UsageProfile {
 
     /**
      * Gets the Wi-Fi traffic
+     *
      * @return the Wi-Fi traffic
      */
     public long getNetworkUsage() {
@@ -98,6 +102,7 @@ public class UsageProfile {
 
     /**
      * Gets the start time
+     *
      * @return the start time
      */
     public int getStart() {
@@ -106,6 +111,7 @@ public class UsageProfile {
 
     /**
      * Sets the start time
+     *
      * @param start the start time
      */
     public void setStart(int start) {
@@ -114,6 +120,7 @@ public class UsageProfile {
 
     /**
      * Gets the day of the week
+     *
      * @return the day of the week
      */
     public int getDay() {
@@ -122,6 +129,7 @@ public class UsageProfile {
 
     /**
      * Gets the end time
+     *
      * @return the end time
      */
     public int getEnd() {
@@ -130,6 +138,7 @@ public class UsageProfile {
 
     /**
      * Checks for equality between usage profiles
+     *
      * @param o the usage profile
      * @return whether they were equal
      */
@@ -148,6 +157,7 @@ public class UsageProfile {
 
     /**
      * Merges two usage profiles such that the form a bigger one.
+     *
      * @param prev the previous usage profile
      * @return the merged usage profile
      */

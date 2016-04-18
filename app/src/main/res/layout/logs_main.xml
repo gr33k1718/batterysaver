@@ -1,33 +1,31 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-android:orientation="vertical"
-android:layout_width="fill_parent"
-android:layout_height="fill_parent"
-android:background="#FFFFFF">
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:background="#FFFFFF"
+    android:orientation="vertical">
 
     <com.github.mikephil.charting.charts.PieChart
         android:id="@+id/chart3"
+        style="?android:listSeparatorTextViewStyle"
         android:layout_width="match_parent"
-        android:layout_height="244dp"
-        style="?android:listSeparatorTextViewStyle"/>
+        android:layout_height="244dp" />
 
     <TextView
+        android:id="@+id/text"
+        style="?android:listSeparatorTextViewStyle"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/text"
-        android:padding="8dp"
-        android:typeface="monospace"
-        android:textStyle="bold"
-        android:textSize="15sp"
-        android:text="Power saving profiles"
         android:gravity="center_horizontal"
-        style="?android:listSeparatorTextViewStyle"
-        />
+        android:padding="8dp"
+        android:text="Power saving profiles"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        android:typeface="monospace" />
 
 
-
-<ListView
-    android:id="@+id/mylist"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent" />
+    <ListView
+        android:id="@+id/mylist"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent" />
 
 </LinearLayout>

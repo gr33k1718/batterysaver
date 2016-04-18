@@ -18,6 +18,7 @@ public class SavingsProfile {
 
     /**
      * Constructor
+     *
      * @param usageProfile the usage profile for savings profile generation
      */
     public SavingsProfile(UsageProfile usageProfile) {
@@ -26,6 +27,7 @@ public class SavingsProfile {
 
     /**
      * Gets the sync delay
+     *
      * @return the sync delay
      */
     public int getSyncTime() {
@@ -34,6 +36,7 @@ public class SavingsProfile {
 
     /**
      * Gets the screen brightness
+     *
      * @return the screen brightness
      */
     public int getBrightness() {
@@ -42,6 +45,7 @@ public class SavingsProfile {
 
     /**
      * Gets the screen timeout
+     *
      * @return the screen timeout
      */
     public long getTimeout() {
@@ -50,6 +54,7 @@ public class SavingsProfile {
 
     /**
      * Gets the network warning limit set
+     *
      * @return the network warning limit
      */
     public long getNetworkWarningLimit() {
@@ -58,6 +63,7 @@ public class SavingsProfile {
 
     /**
      * Check whether the CPU monitor has been activated
+     *
      * @return whether the monitor has been activated
      */
     public boolean isSetCpuMonitor() {
@@ -66,6 +72,7 @@ public class SavingsProfile {
 
     /**
      * Determines the length of the given profile
+     *
      * @return the length of the profile
      */
     private int profileLength() {
@@ -77,8 +84,9 @@ public class SavingsProfile {
 
     /**
      * Scales a number between two previous values to be within two new value
-     * @param valueIn the value to scale
-     * @param baseMax the maximum value prior to scaling
+     *
+     * @param valueIn  the value to scale
+     * @param baseMax  the maximum value prior to scaling
      * @param limitMax the maximum value after scaling
      * @return
      */
@@ -94,6 +102,7 @@ public class SavingsProfile {
 
     /**
      * Helper function to calculate brightness from percentage
+     *
      * @param brightness the brightness percentage
      * @return the actual brightness value
      */
@@ -105,6 +114,7 @@ public class SavingsProfile {
 
     /**
      * Helper function to set default settings
+     *
      * @param brightness the brightness percentage
      */
     private void setDefault(int brightness) {
@@ -115,6 +125,7 @@ public class SavingsProfile {
 
     /**
      * Helper function to convert min to milliseconds
+     *
      * @param min the minutes
      * @return the milliseconds
      */
@@ -124,6 +135,7 @@ public class SavingsProfile {
 
     /**
      * Helper function to convert megabytes to bytes
+     *
      * @param mb the megabytes
      * @return the bytes
      */
@@ -133,6 +145,7 @@ public class SavingsProfile {
 
     /**
      * Creates a power savings profile based on usage type
+     *
      * @return the savings profile
      */
     public SavingsProfile generate() {
@@ -185,13 +198,14 @@ public class SavingsProfile {
 
     /**
      * Generates the device setting based on a number of control parameters.
-     * @param interaction the interaction time
-     * @param maxInteraction the maximum interaction time
-     * @param traffic the total traffic
-     * @param maxTraffic the maximum total traffic
-     * @param usage the total data network interaction time
+     *
+     * @param interaction     the interaction time
+     * @param maxInteraction  the maximum interaction time
+     * @param traffic         the total traffic
+     * @param maxTraffic      the maximum total traffic
+     * @param usage           the total data network interaction time
      * @param brightnessScale the range to scale brightness between
-     * @param minBrightness the minimum brightness percentage
+     * @param minBrightness   the minimum brightness percentage
      */
     private void setSettings(long interaction, long maxInteraction, long traffic,
                              long maxTraffic, int usage, int brightnessScale, int minBrightness) {

@@ -117,7 +117,7 @@ public class LogService extends Service {
             }
         }
 
-        if(savingsProfile == null){
+        if (savingsProfile == null) {
             return;
         }
 
